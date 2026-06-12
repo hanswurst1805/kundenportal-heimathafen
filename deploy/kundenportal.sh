@@ -74,6 +74,8 @@ Kopiere deploy/kundenportal.env.example -> $ENV_FILE und trage Werte ein."
   : "${JWT_EXPIRE_HOURS:=8}"
   : "${LOG_LEVEL:=INFO}"
   : "${SIGNATURE_PROVIDER:=stub}"
+  : "${SIGNING_CERT_PATH:=}"
+  : "${SIGNING_CERT_PASSWORD:=}"
   : "${AVV_PROVIDER:=stub}"
   : "${TARGET_SYSTEM_PROVIDER:=stub}"
   : "${NOTIFICATION_PROVIDER:=stub}"
@@ -93,6 +95,7 @@ Kopiere deploy/kundenportal.env.example -> $ENV_FILE und trage Werte ein."
   API_NAME="${PROJECT}-api"
   CADDY_NAME="${PROJECT}-caddy"
   PGDATA_VOLUME="${PROJECT}_pgdata"
+  DOCUMENTS_VOLUME="${PROJECT}_documents"
   CADDY_DATA_VOLUME="${PROJECT}_caddy_data"
   CADDY_CONFIG_VOLUME="${PROJECT}_caddy_config"
   API_IMAGE="${PROJECT}-api:${IMAGE_TAG}"
@@ -112,7 +115,7 @@ ensure_network() {
 }
 
 ensure_volumes() {
-  for v in "$PGDATA_VOLUME" "$CADDY_DATA_VOLUME" "$CADDY_CONFIG_VOLUME"; do
+  for v in "$PGDATA_VOLUME" "$DOCUMENTS_VOLUME" "$CADDY_DATA_VOLUME" "$CADDY_CONFIG_VOLUME"; do
     if ! podman volume exists "$v"; then
       log "Erstelle Volume $v"
       podman volume create "$v" >/dev/null
@@ -181,6 +184,10 @@ run_api() {
     -e DOMAIN="$DOMAIN" \
     -e LOG_LEVEL="$LOG_LEVEL" \
     -e SEED_DEMO_DATA="$SEED_DEMO_DATA" \
+    -e DOCUMENTS_DIR="/app/data/documents" \
+    -e SIGNING_CERT_PATH="$SIGNING_CERT_PATH" \
+    -e SIGNING_CERT_PASSWORD="$SIGNING_CERT_PASSWORD" \
+    -v "$DOCUMENTS_VOLUME":/app/data \
     "$API_IMAGE" >/dev/null
 }
 
@@ -287,7 +294,7 @@ cmd_seed() {
 
 cmd_destroy() {
   cmd_down
-  for v in "$PGDATA_VOLUME" "$CADDY_DATA_VOLUME" "$CADDY_CONFIG_VOLUME"; do
+  for v in "$PGDATA_VOLUME" "$DOCUMENTS_VOLUME" "$CADDY_DATA_VOLUME" "$CADDY_CONFIG_VOLUME"; do
     if podman volume exists "$v"; then
       log "Entferne Volume $v"
       podman volume rm "$v" >/dev/null

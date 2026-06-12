@@ -7,6 +7,14 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+class SignaturInput(BaseModel):
+    """Optionaler Body beim Signieren – fuer den inhouse-Provider mit
+    handschriftlicher Unterschrift (PNG-Data-URL) und Unterzeichnername."""
+
+    signatur_bild: Optional[str] = None
+    unterzeichner_name: Optional[str] = None
+
+
 class SignaturvorgangOut(BaseModel):
     id: uuid.UUID
     bezugstyp: str

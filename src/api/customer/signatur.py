@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.adapters.registry import get_signature_provider
 from src.automation.events import publish
 from src.core.auth import AuthContext, require_customer
+from src.core.config import settings
 from src.core.database import get_session
+from src.models.customer import Customer
 from src.models.ereignis import AKTEUR_USER
 from src.models.signatur import SIGNATUR_SIGNIERT, SIGNATUR_VERSENDET, Signaturvorgang
 from src.core.status_codes import EVENT_SIGNATURE_COMPLETED
-from src.schemas.signatur import SignaturvorgangOut
+from src.schemas.signatur import SignaturInput, SignaturvorgangOut
 from src.services.signatur_resolve import resolve_customer_id
 from datetime import datetime, timezone
 
@@ -57,9 +60,18 @@ async def get_signaturvorgang(
     return vorgang
 
 
+def _client_ip(request: Request) -> str | None:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else None
+
+
 @router.post("/{token}/signieren", response_model=SignaturvorgangOut)
 async def signieren(
     token: str,
+    request: Request,
+    payload: SignaturInput | None = None,
     session: AsyncSession = Depends(get_session),
     ctx: AuthContext = Depends(require_customer),
 ):
@@ -74,6 +86,27 @@ async def signieren(
     customer_id = await resolve_customer_id(session, vorgang)
     if customer_id:
         ctx.require_customer_scope(customer_id)
+
+    payload = payload or SignaturInput()
+
+    # Beim inhouse-Provider ist eine handschriftliche Unterschrift erforderlich.
+    if settings.signature_provider == "inhouse" and not payload.signatur_bild:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unterschrift fehlt")
+
+    # Unterzeichnername bestimmen: Eingabe -> Kundenkontakt -> Benutzername.
+    unterzeichner_name = payload.unterzeichner_name
+    if not unterzeichner_name and customer_id:
+        customer = await session.get(Customer, customer_id)
+        unterzeichner_name = customer.contact_name or customer.name if customer else None
+    unterzeichner_name = unterzeichner_name or ctx.username
+
+    await get_signature_provider().apply_signature(
+        session,
+        vorgang,
+        unterzeichner_name=unterzeichner_name,
+        signatur_bild=payload.signatur_bild,
+        ip_adresse=_client_ip(request),
+    )
 
     vorgang.status = SIGNATUR_SIGNIERT
     vorgang.signierzeit = datetime.now(timezone.utc)

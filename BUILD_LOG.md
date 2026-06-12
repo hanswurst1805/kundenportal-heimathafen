@@ -220,3 +220,26 @@ Für die Installation auf einem externen Linux-VPS ohne `podman-compose` – sta
 - `.gitignore`: `deploy/kundenportal.env` und weitere `deploy/*.env` (Secrets) ausgenommen, nur die `.example`-Vorlage wird versioniert.
 
 **Verifikation**: `bash -n` (Syntax) fehlerfrei; Skriptlogik (Argument-Parsing, Laden/Validieren der Env-Datei, Ableiten der Namen, Reihenfolge `network → volumes → build → db → wait_for_db → api → caddy`, korrekt aufgebaute `podman run`-Kommandos inkl. `--entrypoint`, `--network-alias`, Port-Mappings und `DATABASE_URL=…@db:5432`) gegen ein `podman`-Stub-Skript geprüft; Pflichtwert-Prüfung bricht mit klarer Meldung ab. (Realer Podman-Lauf erfolgt auf dem Ziel-VPS.)
+
+## Nachtrag: Echte Signaturen (In-Portal, signature_provider=inhouse)
+
+Recherche (Open-Source, eIDAS): self-hosted Plattformen wie OpenSign/DocuSeal bieten die API/Webhooks nur im kostenpflichtigen Plan an; die kostenlose Self-Host-Version ist nicht per API automatisierbar. Da EES/FES als Rechtsstufe ausreicht, wurde eine **leichtgewichtige In-Portal-Lösung ohne Zusatzdienst** umgesetzt – sie fügt sich als zweiter `SignatureProvider` hinter den bestehenden Adapter (`signature_provider=stub|inhouse`).
+
+- **Ablauf**: Der Kunde zeichnet auf der Signaturseite (`/portal/signatur/:token`) seine Unterschrift auf einem Canvas und gibt seinen Namen ein. Das Backend erzeugt daraus ein PDF (Dokumentdaten + eingebettete handschriftliche Unterschrift + Audit-Trail: Name, Zeitstempel, IP, Vorgangs-ID) und **versiegelt es kryptografisch (PAdES) mit pyHanko** (manipulationssicher = FES). Das signierte PDF wird als kundensichtbares Dokument abgelegt und ist unter „Dokumente“ herunterladbar.
+- **Nur Open-Source-Bibliotheken**: `reportlab` (PDF), `pyhanko` (PAdES-Versiegelung), `pillow` (Unterschrift-Bild), `cryptography` (selbstsigniertes Siegel-Zertifikat); Frontend `signature_pad` (Canvas).
+- **Siegel-Zertifikat**: ist kein eigenes Zertifikat (`SIGNING_CERT_PATH`) konfiguriert, wird beim ersten Signieren automatisch ein selbstsigniertes PKCS#12 unter `<DOCUMENTS_DIR>/../signing/` erzeugt und wiederverwendet. Die Unterzeichner-Identität ergibt sich aus Login + Audit-Trail.
+
+### Geänderte/neue Dateien
+
+- `src/services/pdf_signing.py` (neu): `ensure_signing_pkcs12()` (Self-Signed-Zertifikat), `build_signature_pdf()` (reportlab), `seal_pdf()` (pyHanko PAdES), `erzeuge_signiertes_pdf()` (Orchestrierung + Ablage).
+- `src/adapters/signature/inhouse.py` (neu): `InhouseSignatureProvider` – `create_envelope`/`get_status`/`cancel` wie der Stub plus `apply_signature()`, das je Bezugstyp (Angebot/Bestellung/AVV/Auftragsbestätigung) den Dokumentinhalt aufbaut, das versiegelte PDF erzeugt (CPU-/Krypto-Arbeit via `asyncio.to_thread`, da pyHanko intern `asyncio.run` nutzt) und ein `Dokument` anlegt.
+- `src/adapters/signature/base.py` + `stub.py`: Protokoll um `apply_signature()` erweitert (Stub = no-op).
+- `src/adapters/registry.py`: `signature_provider=inhouse` registriert.
+- `src/core/config.py`: `documents_dir`, `signing_cert_path`, `signing_cert_password`.
+- `src/api/customer/signatur.py`: Signier-Endpoint nimmt optionalen Body (`signatur_bild`, `unterzeichner_name`), erfasst die IP (X-Forwarded-For), ruft `apply_signature`; beim inhouse-Provider ist die Unterschrift Pflicht (422).
+- `src/api/customer/dokumente.py`: `GET /portal/dokumente/{id}/download` (FileResponse, mandantengeprüft).
+- `src/schemas/signatur.py`: `SignaturInput`.
+- Frontend: `Signatur.tsx` (Canvas via `signature_pad`, Branch auf `anbieter='inhouse'`), `Dokumente.tsx` (Download-Button, Blob-Download mit Auth-Header), `client.ts` (`signieren(token, payload)`, `dokumente.download`).
+- Deployment: `documents_dir` als persistentes Volume (`kundenportal_documents` → `/app/data`) in `podman-compose.prod.yml` und `deploy/kundenportal.sh`; `.env.example`/`deploy/*.env.example` um `SIGNATURE_PROVIDER=inhouse`, `DOCUMENTS_DIR`, `SIGNING_CERT_*` erweitert; `.gitignore` ignoriert `data/`.
+
+**Verifikation**: Inhouse-Provider real gegen die DB getestet (`tests/test_signatur_inhouse.py`) – `apply_signature` erzeugt ein `signatur_dokument` (sichtbarkeit `kunde`) mit gültigem, **einfach signiertem** PDF (pyHanko liest genau eine eingebettete Signatur `KundenportalSignatur`). Gesamte Test-Suite grün (`10 passed`), Stub-Signierpfad der bestehenden Integrationstests unverändert. Frontend `npx tsc -b` + `npx eslint .` ohne Fehler. API-Image frisch gebaut – `reportlab`/`pyhanko`/`pillow`/`cryptography` sind im Image enthalten.

@@ -40,3 +40,7 @@ class StubSignatureProvider:
     async def cancel(self, session: AsyncSession, vorgang: Signaturvorgang) -> None:
         vorgang.status = "abgelehnt"
         await session.flush()
+
+    async def apply_signature(self, session, vorgang, *, unterzeichner_name, signatur_bild, ip_adresse):
+        """Stub erzeugt kein Dokument – das Klick-Signieren genuegt."""
+        return None

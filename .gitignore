@@ -22,6 +22,9 @@ node_modules/
 frontend/dist/
 frontend/.vite/
 
+# Generierte Dokumente + Siegel-Zertifikat (enthalten Daten/Secrets)
+data/
+
 # Logs
 *.log
 

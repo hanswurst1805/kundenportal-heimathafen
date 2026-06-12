@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import uuid
-from typing import Protocol
+from typing import Optional, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.models.dokument import Dokument
 from src.models.signatur import Signaturvorgang
 
 
@@ -30,4 +31,18 @@ class SignatureProvider(Protocol):
 
     async def cancel(self, session: AsyncSession, vorgang: Signaturvorgang) -> None:
         """Bricht einen laufenden Signaturvorgang ab."""
+        ...
+
+    async def apply_signature(
+        self,
+        session: AsyncSession,
+        vorgang: Signaturvorgang,
+        *,
+        unterzeichner_name: str,
+        signatur_bild: Optional[str],
+        ip_adresse: Optional[str],
+    ) -> Optional[Dokument]:
+        """Wird beim Signieren im Portal aufgerufen. Provider mit Dokument-Erzeugung
+        (z.B. inhouse) erstellen hier das signierte PDF und geben das Dokument
+        zurueck; einfache Provider geben None zurueck."""
         ...

@@ -12,11 +12,20 @@ class Settings(BaseSettings):
     jwt_expire_hours: int = 8
     initial_admin_password: str = "changeme"  # Wird beim ersten Start gesetzt
 
-    # Adapter-Provider (stub | real)
+    # Adapter-Provider (stub | inhouse)
     signature_provider: str = "stub"
     avv_provider: str = "stub"
     target_system_provider: str = "stub"
     notification_provider: str = "stub"
+
+    # Dokumentenablage (generierte/signierte PDFs)
+    documents_dir: str = "data/documents"
+
+    # In-Portal-Signatur (signature_provider=inhouse): Siegel-Zertifikat (PKCS#12).
+    # Bleibt der Pfad leer, wird beim ersten Signieren ein selbstsigniertes
+    # Zertifikat erzeugt und unter <documents_dir>/../signing/ abgelegt.
+    signing_cert_path: str = ""
+    signing_cert_password: str = ""
 
     # Deployment
     domain: str = "heihaf.kiste.org"

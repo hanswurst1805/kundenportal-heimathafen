@@ -43,6 +43,11 @@ services:
       DOMAIN: ${DOMAIN:-heihaf.kiste.org}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      SIGNATURE_PROVIDER: ${SIGNATURE_PROVIDER:-stub}
+      DOCUMENTS_DIR: /app/data/documents
+    volumes:
+      # Generierte/signierte PDFs + Siegel-Zertifikat persistent halten
+      - kundenportal_documents:/app/data
     depends_on:
       db:
         condition: service_healthy
@@ -66,5 +71,6 @@ services:
 
 volumes:
   kundenportal_pgdata:
+  kundenportal_documents:
   caddy_data:
   caddy_config:

@@ -624,8 +624,14 @@ export const api = {
       get(token: string): Promise<Signaturvorgang> {
         return req<Signaturvorgang>(`/portal/signatur/${token}`)
       },
-      signieren(token: string): Promise<Signaturvorgang> {
-        return req<Signaturvorgang>(`/portal/signatur/${token}/signieren`, { method: 'POST' })
+      signieren(
+        token: string,
+        payload?: { signatur_bild?: string; unterzeichner_name?: string },
+      ): Promise<Signaturvorgang> {
+        return req<Signaturvorgang>(`/portal/signatur/${token}/signieren`, {
+          method: 'POST',
+          body: JSON.stringify(payload ?? {}),
+        })
       },
     },
 
@@ -667,6 +673,21 @@ export const api = {
     dokumente: {
       list(): Promise<Dokument[]> {
         return req<Dokument[]>('/portal/dokumente')
+      },
+      async download(id: string, dateiname: string): Promise<void> {
+        const res = await fetch(`${BASE}/portal/dokumente/${id}/download`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        })
+        if (!res.ok) throw new Error('Download fehlgeschlagen')
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = dateiname
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
       },
     },
 

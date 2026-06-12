@@ -1,19 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
+import SignaturePad from 'signature_pad'
 import { api } from '../../api/client'
 import { formatDateTime } from '../../lib/format'
-import { FileSignature, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
+import { FileSignature, CheckCircle2, XCircle, AlertTriangle, Eraser } from 'lucide-react'
 
 const BEZUG_LABELS: Record<string, string> = {
   angebot: 'Angebot',
   bestellung: 'Bestellung',
+  avv: 'Auftragsverarbeitungsvertrag',
+  auftragsbestaetigung: 'Auftragsbestätigung',
 }
 
 export default function Signatur() {
   const { token } = useParams<{ token: string }>()
   const queryClient = useQueryClient()
   const [error, setError] = useState('')
+  const [name, setName] = useState('')
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const padRef = useRef<SignaturePad | null>(null)
 
   const { data: vorgang, isLoading } = useQuery({
     queryKey: ['portal', 'signatur', token],
@@ -22,14 +29,53 @@ export default function Signatur() {
   })
 
   const signieren = useMutation({
-    mutationFn: () => api.portal.signatur.signieren(token!),
+    mutationFn: (payload?: { signatur_bild?: string; unterzeichner_name?: string }) =>
+      api.portal.signatur.signieren(token!, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['portal', 'signatur', token] }),
     onError: (e: Error) => setError(e.message),
   })
 
+  const isInhouse = vorgang?.anbieter === 'inhouse'
+  const signierbar = vorgang?.status === 'versendet' || vorgang?.status === 'erstellt'
+
+  useEffect(() => {
+    if (!isInhouse || !signierbar || !canvasRef.current) return
+    const canvas = canvasRef.current
+    const ratio = Math.max(window.devicePixelRatio || 1, 1)
+    canvas.width = canvas.offsetWidth * ratio
+    canvas.height = canvas.offsetHeight * ratio
+    canvas.getContext('2d')?.scale(ratio, ratio)
+    const pad = new SignaturePad(canvas, { penColor: '#0f172a' })
+    padRef.current = pad
+    return () => {
+      pad.off()
+      padRef.current = null
+    }
+  }, [isInhouse, signierbar])
+
   if (isLoading || !vorgang) return <p className="text-slate-500 text-sm">Lade…</p>
 
   const bezugLabel = BEZUG_LABELS[vorgang.bezugstyp] ?? vorgang.bezugstyp
+
+  function submit() {
+    setError('')
+    if (isInhouse) {
+      if (!padRef.current || padRef.current.isEmpty()) {
+        setError('Bitte unterschreiben Sie im Feld.')
+        return
+      }
+      if (!name.trim()) {
+        setError('Bitte geben Sie Ihren Namen ein.')
+        return
+      }
+      signieren.mutate({
+        signatur_bild: padRef.current.toDataURL('image/png'),
+        unterzeichner_name: name.trim(),
+      })
+    } else {
+      signieren.mutate(undefined)
+    }
+  }
 
   return (
     <div className="max-w-lg mx-auto mt-12 bg-slate-900 border border-slate-800 rounded-xl p-8 space-y-6 text-center">
@@ -49,6 +95,11 @@ export default function Signatur() {
           <CheckCircle2 className="text-emerald-500 mx-auto" size={32} />
           <p className="text-sm text-slate-300">Dokument wurde erfolgreich signiert.</p>
           {vorgang.signierzeit && <p className="text-xs text-slate-500">am {formatDateTime(vorgang.signierzeit)}</p>}
+          {isInhouse && (
+            <p className="text-xs text-slate-500">
+              Das signierte, versiegelte PDF finden Sie unter „Dokumente“.
+            </p>
+          )}
         </div>
       )}
 
@@ -68,20 +119,51 @@ export default function Signatur() {
         </div>
       )}
 
-      {(vorgang.status === 'versendet' || vorgang.status === 'erstellt') && (
+      {signierbar && (
         <div className="space-y-4">
           <p className="text-sm text-slate-300">
             Bitte prüfen Sie das Dokument und bestätigen Sie die Signatur, um den Vorgang abzuschließen.
           </p>
+
+          {isInhouse && (
+            <div className="space-y-3 text-left">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Name (Unterzeichner)</label>
+                <input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Vor- und Nachname"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs text-slate-400">Unterschrift</label>
+                  <button
+                    type="button"
+                    onClick={() => padRef.current?.clear()}
+                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200"
+                  >
+                    <Eraser size={12} /> löschen
+                  </button>
+                </div>
+                <canvas
+                  ref={canvasRef}
+                  className="w-full h-40 rounded-lg bg-white touch-none cursor-crosshair"
+                />
+              </div>
+            </div>
+          )}
+
           {error && (
             <p className="text-sm text-red-400 bg-red-950 border border-red-800 rounded-lg px-3 py-2">{error}</p>
           )}
           <button
-            onClick={() => { setError(''); signieren.mutate() }}
+            onClick={submit}
             disabled={signieren.isPending}
             className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white text-sm font-medium px-4 py-2.5 rounded-lg"
           >
-            Jetzt signieren
+            {isInhouse ? 'Rechtsverbindlich signieren' : 'Jetzt signieren'}
           </button>
         </div>
       )}

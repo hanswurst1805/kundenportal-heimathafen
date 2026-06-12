@@ -9,6 +9,7 @@ from src.adapters.avv.stub import StubAVVWorkflow
 from src.adapters.notification.base import NotificationProvider
 from src.adapters.notification.stub import StubNotificationProvider
 from src.adapters.signature.base import SignatureProvider
+from src.adapters.signature.inhouse import InhouseSignatureProvider
 from src.adapters.signature.stub import StubSignatureProvider
 from src.adapters.target_system.base import TargetSystemAdapter
 from src.adapters.target_system.stub import StubTargetSystemAdapter
@@ -19,6 +20,8 @@ from src.core.config import settings
 def get_signature_provider() -> SignatureProvider:
     if settings.signature_provider == "stub":
         return StubSignatureProvider()
+    if settings.signature_provider == "inhouse":
+        return InhouseSignatureProvider()
     raise ValueError(f"Unbekannter signature_provider: {settings.signature_provider}")
 
 
