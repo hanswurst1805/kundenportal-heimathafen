@@ -295,6 +295,7 @@ async def test_openapi_deckt_alle_teilbereiche(client):
         "/api/v1/intern/signaturen",
         "/api/v1/intern/monitoring/uebersicht",
         "/api/v1/intern/kunden",
+        "/api/v1/intern/dokumente",
         "/api/v1/intern/leistungen",
         "/api/v1/intern/umfragen",
         "/api/v1/intern/statusregeln",

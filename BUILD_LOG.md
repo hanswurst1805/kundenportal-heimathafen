@@ -243,3 +243,18 @@ Recherche (Open-Source, eIDAS): self-hosted Plattformen wie OpenSign/DocuSeal bi
 - Deployment: `documents_dir` als persistentes Volume (`kundenportal_documents` → `/app/data`) in `podman-compose.prod.yml` und `deploy/kundenportal.sh`; `.env.example`/`deploy/*.env.example` um `SIGNATURE_PROVIDER=inhouse`, `DOCUMENTS_DIR`, `SIGNING_CERT_*` erweitert; `.gitignore` ignoriert `data/`.
 
 **Verifikation**: Inhouse-Provider real gegen die DB getestet (`tests/test_signatur_inhouse.py`) – `apply_signature` erzeugt ein `signatur_dokument` (sichtbarkeit `kunde`) mit gültigem, **einfach signiertem** PDF (pyHanko liest genau eine eingebettete Signatur `KundenportalSignatur`). Gesamte Test-Suite grün (`10 passed`), Stub-Signierpfad der bestehenden Integrationstests unverändert. Frontend `npx tsc -b` + `npx eslint .` ohne Fehler. API-Image frisch gebaut – `reportlab`/`pyhanko`/`pillow`/`cryptography` sind im Image enthalten.
+
+### Nachtrag: Signaturen in der internen Sicht verankert
+
+- `src/api/internal/dokumente.py` (neu, admin/user): `GET /intern/dokumente` (alle Mandanten, optional gefiltert nach `bezugstyp`/`bezugs_id`/`customer_id`) und `GET /intern/dokumente/{id}/download` (FileResponse). In `src/api/internal/__init__.py` registriert.
+- `frontend/src/api/client.ts`: `intern.dokumente.list(params)` + `intern.dokumente.download(id, name)` (Blob-Download mit Auth-Header).
+- `frontend/src/pages/internal/Signaturen.tsx`: pro Vorgang zusätzlich
+  - **„Link"** (bei `versendet`/`erstellt`): kopiert den kundenseitigen Signatur-Link `…/portal/signatur/{token}` in die Zwischenablage – so kann der interne Mitarbeiter „zur Signatur senden“ sichtbar nachvollziehen/weiterleiten,
+  - **„Beleg"** (bei `signiert` + `anbieter=inhouse`): lädt das signierte, versiegelte PDF herunter (ermittelt über `intern.dokumente.list({bezugstyp, bezugs_id})`),
+  - sowie Anzeige des Signaturzeitpunkts.
+
+**Verifikation**: Neue Routen im OpenAPI-Schema vorhanden (Coverage-Test um `/api/v1/intern/dokumente` erweitert); Test-Suite weiterhin `10 passed`; Frontend `tsc`/`eslint` fehlerfrei.
+
+---
+
+**Stand:** Das Kundenportal bietet damit echte In-Portal-Signaturen (FES) inkl. interner Sichtbarkeit (Signatur-Link kopieren, signierten Beleg herunterladen) – wahlweise per `SIGNATURE_PROVIDER` aktivierbar (`stub` ↔ `inhouse`), ohne externen Dienst.

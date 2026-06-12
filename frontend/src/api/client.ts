@@ -840,6 +840,32 @@ export const api = {
       },
     },
 
+    dokumente: {
+      list(params?: { bezugstyp?: string; bezugs_id?: string; customer_id?: string }): Promise<Dokument[]> {
+        const q = new URLSearchParams()
+        if (params?.bezugstyp) q.set('bezugstyp', params.bezugstyp)
+        if (params?.bezugs_id) q.set('bezugs_id', params.bezugs_id)
+        if (params?.customer_id) q.set('customer_id', params.customer_id)
+        const qs = q.toString()
+        return req<Dokument[]>(`/intern/dokumente${qs ? `?${qs}` : ''}`)
+      },
+      async download(id: string, dateiname: string): Promise<void> {
+        const res = await fetch(`${BASE}/intern/dokumente/${id}/download`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        })
+        if (!res.ok) throw new Error('Download fehlgeschlagen')
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = dateiname
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+      },
+    },
+
     monitoring: {
       uebersicht(): Promise<MonitoringUebersicht> {
         return req<MonitoringUebersicht>('/intern/monitoring/uebersicht')

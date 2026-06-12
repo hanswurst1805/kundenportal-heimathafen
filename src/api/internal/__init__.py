@@ -8,6 +8,7 @@ from src.api.internal.auftraege import router as auftraege_router
 from src.api.internal.avv import router as avv_router
 from src.api.internal.avv import vorlagen_router as avv_vorlagen_router
 from src.api.internal.bestellungen import router as bestellungen_router
+from src.api.internal.dokumente import router as dokumente_router
 from src.api.internal.kunden import router as kunden_router
 from src.api.internal.leistungen import router as leistungen_router
 from src.api.internal.leistungsscheine import router as leistungsscheine_router
@@ -30,6 +31,7 @@ router.include_router(avv_vorlagen_router)
 router.include_router(signaturen_router)
 router.include_router(monitoring_router)
 router.include_router(kunden_router)
+router.include_router(dokumente_router)
 router.include_router(leistungen_router)
 router.include_router(umfragen_router)
 router.include_router(statusregeln_router)
