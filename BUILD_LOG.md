@@ -163,3 +163,17 @@ Neuer Namespace `api.intern` mit vollständiger Abdeckung aller 14 internen Teil
 Alle `<Placeholder>`-Routen unter `/intern/*` durch die neuen Seiten ersetzt, neue Route `/intern/anfragen/:id/angebot` und `/intern/leistungsscheine/:id` ergänzt. Import von `Placeholder` entfernt (nicht mehr verwendet).
 
 **Verifikation**: `npx tsc -b` und `npx eslint .` im `frontend`-Container ohne Fehler/Warnungen; `docker compose -f podman-compose.yml up -d db api frontend` startet alle drei Container fehlerfrei, Vite-Dev-Server liefert weiterhin unter `:5173`.
+
+## Schritt 10: Demo-/Seed-Daten
+
+- `scripts/seed_demo_data.py`: async Seed-Skript, das einen reproduzierbaren Demo-Bestand anlegt und dabei den Fachprozess über denselben Event-Bus (`src.automation.events.publish`) durchspielt, den auch die API nutzt – die erzeugten Statusübergänge entsprechen damit exakt dem Produktivverhalten.
+  - **StatusRegeln**: legt fehlende Regeln für alle 9 Trigger an (idempotent; die Basis-Konfiguration kommt bereits aus Migration `0002`, das Skript ergänzt nur Lücken)
+  - **AVV-Vorlage**: eine aktive „Standard-AVV (Art. 28 DSGVO)“
+  - **Katalog**: 5 Leistungen (Managed Workplace/Backup mit AVV-Pflicht, IT-Sicherheitsaudit, Microsoft-365-Einführung, Support-Kontingent)
+  - **Benutzer**: `admin` (2FA-Pflicht), `mitarbeiter` (Rolle `user`, 2FA-Pflicht), `kunde1`/`kunde2` (Rolle `kunde`); Demo-Passwörter werden am Ende ausgegeben
+  - **Kunden**: „Nordlicht Logistik GmbH“ (K-1001) und „Alpenblick Steuerberatung“ (K-1002), je mit Kontakt-E-Mail (damit der Notification-Stub greift)
+  - **Offene Anfrage**: eine Anfrage im Status `in_pruefung` für Kunde 2
+  - **Vollständiger Durchlauf** für Kunde 1 (Managed Workplace, AVV-pflichtig): Bestellung → Signatur (`signature_completed`) → AVV ausstehend (`avv_required`) → AVV angenommen (`avv_completed`) → automatisch angelegter Auftrag + Leistungsschein (`beauftragt`) → Kick-Off-Workshop (`kickoff_gestartet`) → Onboarding-Workshop (`onboarding_workshop`) → Protokoll freigegeben (`onboarding_workshop_finished` → `in_bearbeitung`); zusätzlich 3 Aufgaben in den Status `erledigt`/`in_bearbeitung`/`offen`
+- Idempotenz: das Skript bricht ab, wenn Kunde `K-1001` bereits existiert.
+
+**Verifikation**: `alembic downgrade base && alembic upgrade head` läuft fehlerfrei durch (Reversibilität bestätigt; Migration `0002` seedet die StatusRegel-Konfiguration). `python scripts/seed_demo_data.py` im `api`-Container legt den Bestand an; Kontrolle per `psql` bestätigt Leistungsschein `LS-2026-0001` im Status `in_bearbeitung`, zwei Workshops (`kickoff`=geplant, `onboarding`=protokoll_freigegeben), drei Aufgaben, AVV `abgeschlossen`, Anfrage `in_pruefung`. Zweiter Aufruf bricht idempotent ab.
