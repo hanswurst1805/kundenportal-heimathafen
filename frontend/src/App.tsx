@@ -5,7 +5,6 @@ import CustomerLayout from './components/CustomerLayout'
 import InternalLayout from './components/InternalLayout'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
-import Placeholder from './pages/Placeholder'
 import Dashboard from './pages/customer/Dashboard'
 import Katalog from './pages/customer/Katalog'
 import Anfragen from './pages/customer/Anfragen'
@@ -17,6 +16,22 @@ import LeistungsscheinDetail from './pages/customer/LeistungsscheinDetail'
 import Dokumente from './pages/customer/Dokumente'
 import Umfragen from './pages/customer/Umfragen'
 import Signatur from './pages/customer/Signatur'
+import InternDashboard from './pages/internal/Dashboard'
+import InternAnfragen from './pages/internal/Anfragen'
+import AngebotErstellen from './pages/internal/AngebotErstellen'
+import InternAngebote from './pages/internal/Angebote'
+import InternBestellungen from './pages/internal/Bestellungen'
+import InternAuftraege from './pages/internal/Auftraege'
+import InternLeistungsscheine from './pages/internal/Leistungsscheine'
+import LeistungsscheinBearbeitung from './pages/internal/LeistungsscheinBearbeitung'
+import InternAVV from './pages/internal/AVV'
+import Signaturen from './pages/internal/Signaturen'
+import InternUmfragen from './pages/internal/Umfragen'
+import Monitoring from './pages/internal/Monitoring'
+import Kunden from './pages/internal/Kunden'
+import Leistungen from './pages/internal/Leistungen'
+import Statusregeln from './pages/internal/Statusregeln'
+import Benutzer from './pages/internal/Benutzer'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -65,38 +80,43 @@ function InternalRoutes({ me }: { me: UserMe }) {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/intern" replace />} />
-      <Route path="/intern" element={<InternalLayout><Placeholder title="Übersicht" /></InternalLayout>} />
-      <Route path="/intern/anfragen" element={<InternalLayout><Placeholder title="Anfragen" /></InternalLayout>} />
-      <Route path="/intern/angebote" element={<InternalLayout><Placeholder title="Angebote" /></InternalLayout>} />
+      <Route path="/intern" element={<InternalLayout><InternDashboard /></InternalLayout>} />
+      <Route path="/intern/anfragen" element={<InternalLayout><InternAnfragen /></InternalLayout>} />
+      <Route path="/intern/anfragen/:id/angebot" element={<InternalLayout><AngebotErstellen /></InternalLayout>} />
+      <Route path="/intern/angebote" element={<InternalLayout><InternAngebote /></InternalLayout>} />
       <Route
         path="/intern/bestellungen"
-        element={<InternalLayout><Placeholder title="Bestellungen" /></InternalLayout>}
+        element={<InternalLayout><InternBestellungen /></InternalLayout>}
       />
-      <Route path="/intern/auftraege" element={<InternalLayout><Placeholder title="Aufträge" /></InternalLayout>} />
+      <Route path="/intern/auftraege" element={<InternalLayout><InternAuftraege /></InternalLayout>} />
       <Route
         path="/intern/leistungsscheine"
-        element={<InternalLayout><Placeholder title="Leistungsscheine" /></InternalLayout>}
+        element={<InternalLayout><InternLeistungsscheine /></InternalLayout>}
       />
-      <Route path="/intern/avv" element={<InternalLayout><Placeholder title="AVV" /></InternalLayout>} />
+      <Route
+        path="/intern/leistungsscheine/:id"
+        element={<InternalLayout><LeistungsscheinBearbeitung /></InternalLayout>}
+      />
+      <Route path="/intern/avv" element={<InternalLayout><InternAVV /></InternalLayout>} />
       <Route
         path="/intern/signaturen"
-        element={<InternalLayout><Placeholder title="Signaturen" /></InternalLayout>}
+        element={<InternalLayout><Signaturen /></InternalLayout>}
       />
-      <Route path="/intern/umfragen" element={<InternalLayout><Placeholder title="Umfragen" /></InternalLayout>} />
+      <Route path="/intern/umfragen" element={<InternalLayout><InternUmfragen /></InternalLayout>} />
       <Route
         path="/intern/monitoring"
-        element={<InternalLayout><Placeholder title="Monitoring" /></InternalLayout>}
+        element={<InternalLayout><Monitoring /></InternalLayout>}
       />
-      <Route path="/intern/kunden" element={<InternalLayout><Placeholder title="Kunden" /></InternalLayout>} />
+      <Route path="/intern/kunden" element={<InternalLayout><Kunden /></InternalLayout>} />
       <Route
         path="/intern/leistungen"
-        element={<InternalLayout><Placeholder title="Katalogpflege" /></InternalLayout>}
+        element={<InternalLayout><Leistungen /></InternalLayout>}
       />
       <Route
         path="/intern/statusregeln"
         element={
           isAdmin
-            ? <InternalLayout><Placeholder title="Statusregeln" /></InternalLayout>
+            ? <InternalLayout><Statusregeln /></InternalLayout>
             : <Navigate to="/intern" replace />
         }
       />
@@ -104,7 +124,7 @@ function InternalRoutes({ me }: { me: UserMe }) {
         path="/intern/benutzer"
         element={
           isAdmin
-            ? <InternalLayout><Placeholder title="Benutzerverwaltung" /></InternalLayout>
+            ? <InternalLayout><Benutzer /></InternalLayout>
             : <Navigate to="/intern" replace />
         }
       />

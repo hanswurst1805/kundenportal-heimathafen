@@ -1,20 +1,4 @@
-const KUNDENSTATUS_LABELS: Record<string, string> = {
-  anfrage_eingegangen: 'Anfrage eingegangen',
-  in_pruefung: 'In Prüfung',
-  angebot_erstellt: 'Angebot erstellt',
-  warten_auf_signatur: 'Warten auf Signatur',
-  avv_ausstehend: 'AVV ausstehend',
-  beauftragt: 'Beauftragt',
-  kickoff_gestartet: 'Projekt Kick-Off gestartet',
-  in_vorbereitung: 'In Vorbereitung',
-  onboarding_workshop: 'Onboarding-Workshop',
-  in_bearbeitung: 'In Bearbeitung',
-  warten_auf_kunde: 'Warten auf Kunde',
-  fertiggestellt: 'Fertiggestellt',
-  kundenzufriedenheitsabfrage: 'Kundenzufriedenheitsabfrage',
-  abgeschlossen: 'Abgeschlossen',
-  storniert: 'Storniert',
-}
+import { KUNDENSTATUS_LABELS } from '../lib/statuscodes'
 
 const STATUS_COLORS: Record<string, string> = {
   anfrage_eingegangen: 'bg-slate-700 text-slate-200',

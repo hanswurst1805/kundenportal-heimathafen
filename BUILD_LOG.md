@@ -126,3 +126,40 @@ Fortlaufende Dokumentation der Implementierungsschritte (siehe Plan unter `fachk
 - `src/api/customer/auftraege.py`: `GET /portal/auftraege/{auftrag_id}/auftragsbestaetigung` – liefert die Auftragsbestätigung zu einem Auftrag (mandantengeprüft, 404 falls noch nicht erstellt), Pendant zum internen Endpoint
 
 **Verifikation**: `npx tsc -b` und `npx eslint .` im `frontend`-Container ohne Fehler/Warnungen; `docker compose -f podman-compose.yml up -d db api frontend` startet alle drei Container fehlerfrei, Vite-Dev-Server liefert weiterhin unter `:5173`.
+
+## Schritt 9: Frontend interne Sicht
+
+Alle Routen unter `/intern/*` (für die Rollen `user` und `admin`) mit echten Seiten ersetzt, analog zur Kundensicht aus Schritt 8.
+
+### Neue gemeinsame Konstanten
+
+- `src/lib/statuscodes.ts`: zentrale Quelle für Status-Vokabulare und deutsche Labels, gespiegelt aus `src/core/status_codes.py`. Exportiert `KUNDENSTATUS` (15 Werte) + `KUNDENSTATUS_LABELS`, `INTERNE_ZWISCHENSCHRITTE` (17 Werte), `PRIORITAET_OPTIONS`, sowie Label-Maps für Aufgabe, Workshop (Status/Typ), Angebot, AVV und Signatur. `src/components/StatusBadge.tsx` und mehrere Kundensicht-Seiten (`Angebote.tsx`, `AVV.tsx`) wurden refaktoriert, um ihre lokalen Label-Maps durch Importe aus dieser Datei zu ersetzen (vermeidet Duplikation, behebt zugleich einen `react-refresh/only-export-components`-Lint-Fehler in `StatusBadge.tsx`).
+
+### Erweiterung `src/api/client.ts`
+
+Neuer Namespace `api.intern` mit vollständiger Abdeckung aller 14 internen Teilbereiche (Anfragen, Angebote, Bestellungen, Aufträge, Leistungsscheine inkl. Aufgaben/Workshops, AVV inkl. Vorlagen, Signaturen, Monitoring, Kunden, Leistungen, Umfragen, Statusregeln, Benutzerverwaltung) sowie ~22 neue TypeScript-Interfaces (`AnfrageIntern`, `AngebotCreate`, `LeistungsscheinIntern`, `AufgabeCreate`/`Update`, `WorkshopCreate`/`Update`, `AVVVorlage`, `Customer`, `InternUser`, `StatusRegel`, `Ereignis`, `MonitoringUebersicht`, …).
+
+### Neue interne Seiten (`src/pages/internal/`)
+
+- `Dashboard.tsx` (`/intern`): 4 Kennzahlen-Karten (offene Anfragen/Bestellungen, laufende Leistungsscheine, unverarbeitete Ereignisse) via `GET /intern/monitoring/uebersicht`
+- `Anfragen.tsx` (`/intern/anfragen`): aufklappbare Liste je Anfrage mit Bearbeitungsformular (Fachbereich, Priorität, interner Zwischenschritt, Kundenstatus) via `PATCH /intern/anfragen/{id}`; Link zu „Angebot erstellen“ bzw. „Angebot ansehen“
+- `AngebotErstellen.tsx` (`/intern/anfragen/:id/angebot`): Formular zur Angebotserstellung mit dynamischer Positionsliste, `POST /intern/anfragen/{id}/angebot`
+- `Angebote.tsx` (`/intern/angebote`): Angebotsliste mit Positionstabelle, Gesamtpreis, `StatusBadge`; „Bereitstellen“-Button bei Status `entwurf` (`POST /intern/angebote/{id}/bereitstellen`)
+- `Bestellungen.tsx` (`/intern/bestellungen`): read-only Liste (Bestellnummer, Datum, `StatusBadge`)
+- `Auftraege.tsx` (`/intern/auftraege`): Liste mit Auftragsbestätigungsstatus (`GET /intern/auftraege/{id}/auftragsbestaetigung`) und Link zu Leistungsscheinen
+- `Leistungsscheine.tsx` (`/intern/leistungsscheine`): Listenansicht mit Link zur Detailseite
+- `LeistungsscheinBearbeitung.tsx` (`/intern/leistungsscheine/:id`): vollständige Bearbeitungsseite – allgemeine Felder (Scope, Termine, Status, nächster Schritt, Voraussetzungen, Onboarding-Ziele/offene Punkte, Lessons Learned), Buttons „Kundenrückfrage senden“ (`POST .../kundenrueckfrage`) und „Abschließen“ (`POST .../abschliessen`), Aufgabenverwaltung (anlegen/bearbeiten/löschen über `/intern/leistungsscheine/{id}/aufgaben*`) und Workshopverwaltung (anlegen/bearbeiten über `/intern/leistungsscheine/{id}/workshops*`)
+- `AVV.tsx` (`/intern/avv`): Liste aller AVV-Vorgänge (`StatusBadge`); admin-only Abschnitt „AVV-Vorlagen“ mit Aktiv/Inaktiv-Toggle und Anlegen-Formular (`/intern/avv-vorlagen`)
+- `Signaturen.tsx` (`/intern/signaturen`): Liste mit `SIGNATUR_STATUS_LABELS`, „Erinnerung“-Button bei `versendet` (`POST .../erinnerung`), „Erneut versenden“ bei `fehler`/`abgelaufen` (`POST .../retry`)
+- `Umfragen.tsx` (`/intern/umfragen`): read-only Reporting-Liste mit Bewertung/Kommentar
+- `Monitoring.tsx` (`/intern/monitoring`): Kennzahlen-Karten + Ereignisliste mit Filter „Nur unverarbeitete“ (`GET /intern/monitoring/ereignisse`)
+- `Kunden.tsx` (`/intern/kunden`): Kundenverwaltung – Liste, Anlegen-Formular, Aktiv/Inaktiv-Toggle
+- `Leistungen.tsx` (`/intern/leistungen`): Katalogpflege – Liste, Anlegen-Formular, Toggle für AVV-Pflicht und Aktiv/Inaktiv
+- `Statusregeln.tsx` (`/intern/statusregeln`, admin-only): Liste aller `StatusRegel`-Einträge mit editierbarem Zielstatus (Kundensicht), Benachrichtigungsstufe (`ja`/`optional`/`nein`) und Aktiv-Flag
+- `Benutzer.tsx` (`/intern/benutzer`, admin-only): Benutzerverwaltung – Liste, Anlegen-Formular (inkl. Kundenzuordnung bei Rolle `kunde`), Passwort-Reset, 2FA-Reset, Aktiv/Inaktiv-Toggle
+
+### `src/App.tsx`
+
+Alle `<Placeholder>`-Routen unter `/intern/*` durch die neuen Seiten ersetzt, neue Route `/intern/anfragen/:id/angebot` und `/intern/leistungsscheine/:id` ergänzt. Import von `Placeholder` entfernt (nicht mehr verwendet).
+
+**Verifikation**: `npx tsc -b` und `npx eslint .` im `frontend`-Container ohne Fehler/Warnungen; `docker compose -f podman-compose.yml up -d db api frontend` startet alle drei Container fehlerfrei, Vite-Dev-Server liefert weiterhin unter `:5173`.

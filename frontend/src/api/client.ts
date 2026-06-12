@@ -268,6 +268,229 @@ export interface DashboardData {
 }
 
 // ---------------------------------------------------------------------------
+// Fachobjekt-Typen (Interne Sicht)
+// ---------------------------------------------------------------------------
+
+export interface AnfrageIntern extends Anfrage {
+  ersteller_id: string | null
+  status_intern: string | null
+  angebot_id: string | null
+}
+
+export interface AnfrageInternUpdate {
+  fachbereich?: string
+  prioritaet?: string
+  status_intern?: string
+  status_kunde?: string
+}
+
+export interface AngebotCreate {
+  customer_id: string
+  anfrage_id?: string
+  leistung_id?: string
+  titel: string
+  gueltig_bis?: string
+  positionen: { bezeichnung: string; menge: string; einzelpreis: string; sort_order?: number }[]
+}
+
+export interface LeistungsscheinIntern extends Leistungsschein {
+  customer_id: string
+  verantwortlicher_id: string | null
+  status_intern: string | null
+  onboarding_teilnehmer: unknown[] | null
+  lessons_learned: string | null
+  abschlussstatus: string | null
+}
+
+export interface LeistungsscheinInternUpdate {
+  scope_beschreibung?: string
+  verantwortlicher_id?: string
+  startdatum?: string
+  kickoff_datum?: string
+  workshop_datum?: string
+  solltermin?: string
+  status_kunde?: string
+  status_intern?: string
+  naechster_schritt?: string
+  voraussetzungen?: string
+  onboarding_ziele?: string
+  onboarding_offene_punkte?: string
+  lessons_learned?: string
+  abschlussstatus?: string
+}
+
+export interface AufgabeCreate {
+  titel: string
+  beschreibung?: string
+  zustaendigkeit_id?: string
+  faelligkeit?: string
+  sort_order?: number
+}
+
+export interface AufgabeUpdate {
+  titel?: string
+  beschreibung?: string
+  zustaendigkeit_id?: string
+  faelligkeit?: string
+  status?: string
+  sort_order?: number
+}
+
+export interface WorkshopCreate {
+  typ: string
+  termin?: string
+  teilnehmer?: unknown[]
+}
+
+export interface WorkshopUpdate {
+  termin?: string
+  teilnehmer?: unknown[]
+  protokoll?: string
+  status?: string
+}
+
+export interface AVVVorlage {
+  id: string
+  name: string
+  version: string
+  inhalt: string | null
+  is_active: boolean
+}
+
+export interface AVVVorlageCreate {
+  name: string
+  version?: string
+  inhalt?: string
+  is_active?: boolean
+}
+
+export interface AVVVorlageUpdate {
+  name?: string
+  version?: string
+  inhalt?: string
+  is_active?: boolean
+}
+
+export interface Customer {
+  id: string
+  kundennummer: string
+  name: string
+  short_name: string | null
+  contact_name: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  address: string | null
+  is_active: boolean
+}
+
+export interface CustomerCreate {
+  kundennummer: string
+  name: string
+  short_name?: string
+  contact_name?: string
+  contact_email?: string
+  contact_phone?: string
+  address?: string
+}
+
+export interface CustomerUpdate {
+  name?: string
+  short_name?: string
+  contact_name?: string
+  contact_email?: string
+  contact_phone?: string
+  address?: string
+  is_active?: boolean
+}
+
+export interface InternUser {
+  id: string
+  username: string
+  role: string
+  customer_id: string | null
+  display_name: string | null
+  is_active: boolean
+  totp_enabled: boolean
+  totp_required: boolean
+}
+
+export interface InternUserCreate {
+  username: string
+  password: string
+  role: string
+  customer_id?: string
+  display_name?: string
+}
+
+export interface InternUserUpdate {
+  display_name?: string
+  is_active?: boolean
+  role?: string
+  customer_id?: string
+}
+
+export interface LeistungCreate {
+  leistungs_id: string
+  name: string
+  beschreibung?: string
+  kategorie?: string
+  preis: string
+  preiseinheit?: string
+  avv_erforderlich?: boolean
+  ist_bestellbar?: boolean
+  is_active?: boolean
+}
+
+export interface LeistungUpdate {
+  name?: string
+  beschreibung?: string
+  kategorie?: string
+  preis?: string
+  preiseinheit?: string
+  avv_erforderlich?: boolean
+  ist_bestellbar?: boolean
+  is_active?: boolean
+}
+
+export interface StatusRegel {
+  id: string
+  ereignis_typ: string
+  ziel_status_kunde: string
+  benachrichtigung: string
+  aktiv: boolean
+  beschreibung: string | null
+}
+
+export interface StatusRegelUpdate {
+  ziel_status_kunde?: string
+  benachrichtigung?: string
+  aktiv?: boolean
+  beschreibung?: string
+}
+
+export interface Ereignis {
+  id: string
+  zeit: string
+  customer_id: string | null
+  akteur_id: string | null
+  akteur_typ: string
+  ereignis_typ: string
+  bezugstyp: string | null
+  bezugs_id: string | null
+  vorher_status: string | null
+  nachher_status: string | null
+  payload: Record<string, unknown> | null
+  verarbeitet: boolean
+}
+
+export interface MonitoringUebersicht {
+  offene_anfragen: number
+  offene_bestellungen: number
+  laufende_leistungsscheine: number
+  unverarbeitete_ereignisse: number
+}
+
+// ---------------------------------------------------------------------------
 // API
 // ---------------------------------------------------------------------------
 
@@ -455,6 +678,229 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(data),
         })
+      },
+    },
+  },
+
+  intern: {
+    anfragen: {
+      list(): Promise<AnfrageIntern[]> {
+        return req<AnfrageIntern[]>('/intern/anfragen')
+      },
+      get(id: string): Promise<AnfrageIntern> {
+        return req<AnfrageIntern>(`/intern/anfragen/${id}`)
+      },
+      update(id: string, data: AnfrageInternUpdate): Promise<AnfrageIntern> {
+        return req<AnfrageIntern>(`/intern/anfragen/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+      },
+      createAngebot(id: string, data: AngebotCreate): Promise<Angebot> {
+        return req<Angebot>(`/intern/anfragen/${id}/angebot`, { method: 'POST', body: JSON.stringify(data) })
+      },
+    },
+
+    angebote: {
+      list(): Promise<Angebot[]> {
+        return req<Angebot[]>('/intern/angebote')
+      },
+      get(id: string): Promise<Angebot> {
+        return req<Angebot>(`/intern/angebote/${id}`)
+      },
+      bereitstellen(id: string): Promise<Angebot> {
+        return req<Angebot>(`/intern/angebote/${id}/bereitstellen`, { method: 'POST' })
+      },
+    },
+
+    bestellungen: {
+      list(): Promise<Bestellung[]> {
+        return req<Bestellung[]>('/intern/bestellungen')
+      },
+      get(id: string): Promise<Bestellung> {
+        return req<Bestellung>(`/intern/bestellungen/${id}`)
+      },
+    },
+
+    auftraege: {
+      list(): Promise<Auftrag[]> {
+        return req<Auftrag[]>('/intern/auftraege')
+      },
+      get(id: string): Promise<Auftrag> {
+        return req<Auftrag>(`/intern/auftraege/${id}`)
+      },
+      getAuftragsbestaetigung(id: string): Promise<Auftragsbestaetigung> {
+        return req<Auftragsbestaetigung>(`/intern/auftraege/${id}/auftragsbestaetigung`)
+      },
+    },
+
+    leistungsscheine: {
+      list(): Promise<LeistungsscheinIntern[]> {
+        return req<LeistungsscheinIntern[]>('/intern/leistungsscheine')
+      },
+      get(id: string): Promise<LeistungsscheinIntern> {
+        return req<LeistungsscheinIntern>(`/intern/leistungsscheine/${id}`)
+      },
+      update(id: string, data: LeistungsscheinInternUpdate): Promise<LeistungsscheinIntern> {
+        return req<LeistungsscheinIntern>(`/intern/leistungsscheine/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(data),
+        })
+      },
+      kundenrueckfrage(id: string): Promise<LeistungsscheinIntern> {
+        return req<LeistungsscheinIntern>(`/intern/leistungsscheine/${id}/kundenrueckfrage`, { method: 'POST' })
+      },
+      abschliessen(id: string): Promise<LeistungsscheinIntern> {
+        return req<LeistungsscheinIntern>(`/intern/leistungsscheine/${id}/abschliessen`, { method: 'POST' })
+      },
+      aufgaben: {
+        create(lsId: string, data: AufgabeCreate): Promise<Aufgabe> {
+          return req<Aufgabe>(`/intern/leistungsscheine/${lsId}/aufgaben`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+          })
+        },
+        update(lsId: string, aufgabeId: string, data: AufgabeUpdate): Promise<Aufgabe> {
+          return req<Aufgabe>(`/intern/leistungsscheine/${lsId}/aufgaben/${aufgabeId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+          })
+        },
+        delete(lsId: string, aufgabeId: string): Promise<void> {
+          return req<void>(`/intern/leistungsscheine/${lsId}/aufgaben/${aufgabeId}`, { method: 'DELETE' })
+        },
+      },
+      workshops: {
+        create(lsId: string, data: WorkshopCreate): Promise<Workshop> {
+          return req<Workshop>(`/intern/leistungsscheine/${lsId}/workshops`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+          })
+        },
+        update(lsId: string, workshopId: string, data: WorkshopUpdate): Promise<Workshop> {
+          return req<Workshop>(`/intern/leistungsscheine/${lsId}/workshops/${workshopId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+          })
+        },
+      },
+    },
+
+    avv: {
+      list(): Promise<AVV[]> {
+        return req<AVV[]>('/intern/avv')
+      },
+      get(id: string): Promise<AVV> {
+        return req<AVV>(`/intern/avv/${id}`)
+      },
+      vorlagen: {
+        list(): Promise<AVVVorlage[]> {
+          return req<AVVVorlage[]>('/intern/avv-vorlagen')
+        },
+        create(data: AVVVorlageCreate): Promise<AVVVorlage> {
+          return req<AVVVorlage>('/intern/avv-vorlagen', { method: 'POST', body: JSON.stringify(data) })
+        },
+        update(id: string, data: AVVVorlageUpdate): Promise<AVVVorlage> {
+          return req<AVVVorlage>(`/intern/avv-vorlagen/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+        },
+      },
+    },
+
+    signaturen: {
+      list(): Promise<Signaturvorgang[]> {
+        return req<Signaturvorgang[]>('/intern/signaturen')
+      },
+      get(id: string): Promise<Signaturvorgang> {
+        return req<Signaturvorgang>(`/intern/signaturen/${id}`)
+      },
+      erinnerung(id: string): Promise<Signaturvorgang> {
+        return req<Signaturvorgang>(`/intern/signaturen/${id}/erinnerung`, { method: 'POST' })
+      },
+      retry(id: string): Promise<Signaturvorgang> {
+        return req<Signaturvorgang>(`/intern/signaturen/${id}/retry`, { method: 'POST' })
+      },
+    },
+
+    monitoring: {
+      uebersicht(): Promise<MonitoringUebersicht> {
+        return req<MonitoringUebersicht>('/intern/monitoring/uebersicht')
+      },
+      ereignisse(params?: { verarbeitet?: boolean; ereignis_typ?: string; limit?: number }): Promise<Ereignis[]> {
+        const query = new URLSearchParams()
+        if (params?.verarbeitet !== undefined) query.set('verarbeitet', String(params.verarbeitet))
+        if (params?.ereignis_typ) query.set('ereignis_typ', params.ereignis_typ)
+        if (params?.limit) query.set('limit', String(params.limit))
+        const qs = query.toString()
+        return req<Ereignis[]>(`/intern/monitoring/ereignisse${qs ? `?${qs}` : ''}`)
+      },
+    },
+
+    kunden: {
+      list(): Promise<Customer[]> {
+        return req<Customer[]>('/intern/kunden')
+      },
+      get(id: string): Promise<Customer> {
+        return req<Customer>(`/intern/kunden/${id}`)
+      },
+      create(data: CustomerCreate): Promise<Customer> {
+        return req<Customer>('/intern/kunden', { method: 'POST', body: JSON.stringify(data) })
+      },
+      update(id: string, data: CustomerUpdate): Promise<Customer> {
+        return req<Customer>(`/intern/kunden/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+      },
+    },
+
+    leistungen: {
+      list(): Promise<Leistung[]> {
+        return req<Leistung[]>('/intern/leistungen')
+      },
+      get(id: string): Promise<Leistung> {
+        return req<Leistung>(`/intern/leistungen/${id}`)
+      },
+      create(data: LeistungCreate): Promise<Leistung> {
+        return req<Leistung>('/intern/leistungen', { method: 'POST', body: JSON.stringify(data) })
+      },
+      update(id: string, data: LeistungUpdate): Promise<Leistung> {
+        return req<Leistung>(`/intern/leistungen/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+      },
+    },
+
+    umfragen: {
+      list(): Promise<Umfrage[]> {
+        return req<Umfrage[]>('/intern/umfragen')
+      },
+      get(id: string): Promise<Umfrage> {
+        return req<Umfrage>(`/intern/umfragen/${id}`)
+      },
+    },
+
+    statusregeln: {
+      list(): Promise<StatusRegel[]> {
+        return req<StatusRegel[]>('/intern/statusregeln')
+      },
+      update(id: string, data: StatusRegelUpdate): Promise<StatusRegel> {
+        return req<StatusRegel>(`/intern/statusregeln/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+      },
+    },
+
+    users: {
+      list(): Promise<InternUser[]> {
+        return req<InternUser[]>('/intern/users')
+      },
+      get(id: string): Promise<InternUser> {
+        return req<InternUser>(`/intern/users/${id}`)
+      },
+      create(data: InternUserCreate): Promise<InternUser> {
+        return req<InternUser>('/intern/users', { method: 'POST', body: JSON.stringify(data) })
+      },
+      update(id: string, data: InternUserUpdate): Promise<InternUser> {
+        return req<InternUser>(`/intern/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+      },
+      resetPassword(id: string, new_password: string): Promise<void> {
+        return req<void>(`/intern/users/${id}/reset-password`, {
+          method: 'POST',
+          body: JSON.stringify({ new_password }),
+        })
+      },
+      reset2FA(id: string): Promise<{ totp_enabled: boolean }> {
+        return req<{ totp_enabled: boolean }>(`/intern/users/${id}/reset-2fa`, { method: 'POST' })
       },
     },
   },

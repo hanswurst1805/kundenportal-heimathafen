@@ -1,25 +1,16 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
 import { api, type Angebot } from '../../api/client'
 import { formatCurrency, formatDate } from '../../lib/format'
 import { ANGEBOT_STATUS_LABELS } from '../../lib/statuscodes'
 
-function AngebotCard({ angebot }: { angebot: Angebot }) {
+function AngebotRow({ angebot }: { angebot: Angebot }) {
   const queryClient = useQueryClient()
   const [error, setError] = useState('')
 
-  const { data: vorgaenge } = useQuery({
-    queryKey: ['portal', 'signatur', 'angebot', angebot.id],
-    queryFn: () => api.portal.signatur.listByBezug('angebot', angebot.id),
-    enabled: angebot.status === 'bereitgestellt',
-  })
-
-  const offenerVorgang = vorgaenge?.find(v => v.status === 'versendet')
-
-  const ablehnen = useMutation({
-    mutationFn: () => api.portal.angebote.ablehnen(angebot.id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['portal', 'angebote'] }),
+  const bereitstellen = useMutation({
+    mutationFn: () => api.intern.angebote.bereitstellen(angebot.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['intern', 'angebote'] }),
     onError: (e: Error) => setError(e.message),
   })
 
@@ -27,7 +18,7 @@ function AngebotCard({ angebot }: { angebot: Angebot }) {
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-medium text-white">{angebot.angebotsnummer} – {angebot.titel}</h2>
+          <h2 className="text-sm font-medium text-white">{angebot.angebotsnummer} (v{angebot.version}) – {angebot.titel}</h2>
           {angebot.gueltig_bis && (
             <p className="text-xs text-slate-500 mt-0.5">Gültig bis {formatDate(angebot.gueltig_bis)}</p>
           )}
@@ -62,38 +53,26 @@ function AngebotCard({ angebot }: { angebot: Angebot }) {
 
       <div className="flex items-center justify-between pt-2 border-t border-slate-800">
         <span className="text-sm font-medium text-white">Gesamt: {formatCurrency(angebot.gesamtpreis)}</span>
-        {angebot.status === 'bereitgestellt' && (
-          <div className="flex items-center gap-2">
-            {offenerVorgang?.token && (
-              <Link
-                to={`/portal/signatur/${offenerVorgang.token}`}
-                className="bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium px-4 py-2 rounded-lg"
-              >
-                Zur Signatur
-              </Link>
-            )}
-            <button
-              onClick={() => { setError(''); ablehnen.mutate() }}
-              disabled={ablehnen.isPending}
-              className="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-sm font-medium px-4 py-2 rounded-lg"
-            >
-              Ablehnen
-            </button>
-          </div>
+        {angebot.status === 'entwurf' && (
+          <button
+            onClick={() => { setError(''); bereitstellen.mutate() }}
+            disabled={bereitstellen.isPending}
+            className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white text-sm font-medium px-4 py-2 rounded-lg"
+          >
+            Bereitstellen
+          </button>
         )}
       </div>
 
-      {error && (
-        <p className="text-sm text-red-400 bg-red-950 border border-red-800 rounded-lg px-3 py-2">{error}</p>
-      )}
+      {error && <p className="text-sm text-red-400">{error}</p>}
     </div>
   )
 }
 
 export default function Angebote() {
   const { data: angebote, isLoading } = useQuery({
-    queryKey: ['portal', 'angebote'],
-    queryFn: api.portal.angebote.list,
+    queryKey: ['intern', 'angebote'],
+    queryFn: api.intern.angebote.list,
   })
 
   return (
@@ -103,10 +82,10 @@ export default function Angebote() {
       {isLoading || !angebote ? (
         <p className="text-sm text-slate-500">Lade…</p>
       ) : angebote.length === 0 ? (
-        <p className="text-sm text-slate-500">Noch keine Angebote.</p>
+        <p className="text-sm text-slate-500">Keine Angebote vorhanden.</p>
       ) : (
         <div className="space-y-4">
-          {angebote.map(a => <AngebotCard key={a.id} angebot={a} />)}
+          {angebote.map(a => <AngebotRow key={a.id} angebot={a} />)}
         </div>
       )}
     </div>

@@ -3,13 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/client'
 import { formatDate } from '../../lib/format'
 import { ShieldCheck, ShieldAlert } from 'lucide-react'
-
-const STATUS_LABELS: Record<string, string> = {
-  nicht_erforderlich: 'Nicht erforderlich',
-  ausstehend: 'Ausstehend',
-  versendet: 'Versendet',
-  abgeschlossen: 'Abgeschlossen',
-}
+import { AVV_STATUS_LABELS } from '../../lib/statuscodes'
 
 export default function AVV() {
   const queryClient = useQueryClient()
@@ -49,7 +43,7 @@ export default function AVV() {
                     AVV {avv.version ?? ''} – {avv.bezugstyp} #{avv.bezugs_id.slice(0, 8)}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {STATUS_LABELS[avv.status] ?? avv.status}
+                    {AVV_STATUS_LABELS[avv.status] ?? avv.status}
                     {avv.abschlussdatum && ` · abgeschlossen am ${formatDate(avv.abschlussdatum)}`}
                   </p>
                 </div>

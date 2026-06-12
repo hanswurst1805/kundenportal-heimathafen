@@ -3,25 +3,7 @@ import { useParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import StatusBadge from '../../components/StatusBadge'
 import { formatDate, formatDateTime } from '../../lib/format'
-
-const AUFGABE_LABELS: Record<string, string> = {
-  offen: 'Offen',
-  in_bearbeitung: 'In Bearbeitung',
-  erledigt: 'Erledigt',
-  blockiert: 'Blockiert',
-}
-
-const WORKSHOP_LABELS: Record<string, string> = {
-  geplant: 'Geplant',
-  durchgefuehrt: 'Durchgeführt',
-  protokoll_freigegeben: 'Protokoll freigegeben',
-  verschoben: 'Verschoben',
-}
-
-const WORKSHOP_TYP_LABELS: Record<string, string> = {
-  kickoff: 'Kick-Off',
-  onboarding: 'Onboarding',
-}
+import { AUFGABE_STATUS_LABELS, WORKSHOP_STATUS_LABELS, WORKSHOP_TYP_LABELS } from '../../lib/statuscodes'
 
 export default function LeistungsscheinDetail() {
   const { id } = useParams<{ id: string }>()
@@ -93,7 +75,7 @@ export default function LeistungsscheinDetail() {
                 <div className="flex items-center gap-3">
                   {a.faelligkeit && <span className="text-xs text-slate-500">{formatDate(a.faelligkeit)}</span>}
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-200">
-                    {AUFGABE_LABELS[a.status] ?? a.status}
+                    {AUFGABE_STATUS_LABELS[a.status] ?? a.status}
                   </span>
                 </div>
               </li>
@@ -115,7 +97,7 @@ export default function LeistungsscheinDetail() {
                   {w.termin && <p className="text-xs text-slate-500">{formatDateTime(w.termin)}</p>}
                 </div>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-200">
-                  {WORKSHOP_LABELS[w.status] ?? w.status}
+                  {WORKSHOP_STATUS_LABELS[w.status] ?? w.status}
                 </span>
               </li>
             ))}
