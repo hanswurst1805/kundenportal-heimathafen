@@ -31,7 +31,7 @@ const nav = [
   { to: '/intern/umfragen', icon: Smile, label: 'Umfragen', adminOnly: false },
   { to: '/intern/monitoring', icon: Activity, label: 'Monitoring', adminOnly: false },
   { to: '/intern/kunden', icon: Building2, label: 'Kunden', adminOnly: false },
-  { to: '/intern/leistungen', icon: Boxes, label: 'Katalogpflege', adminOnly: false },
+  { to: '/intern/leistungen', icon: Boxes, label: 'Katalog-Editor', adminOnly: false },
   { to: '/intern/statusregeln', icon: SlidersHorizontal, label: 'Statusregeln', adminOnly: true },
   { to: '/intern/benutzer', icon: Users, label: 'Benutzerverwaltung', adminOnly: true },
 ]
