@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '../../api/client'
+import { api, getRole } from '../../api/client'
 import { Plus } from 'lucide-react'
 
 export default function Kunden() {
   const queryClient = useQueryClient()
+  const isAdmin = getRole() === 'admin'
   const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [kundennummer, setKundennummer] = useState('')
@@ -12,6 +13,8 @@ export default function Kunden() {
   const [contactEmail, setContactEmail] = useState('')
 
   const { data: kunden, isLoading } = useQuery({ queryKey: ['intern', 'kunden'], queryFn: api.intern.kunden.list })
+  // /intern/users ist admin-only -> Zuordnungs-Anzeige nur fuer Admins laden
+  const { data: users } = useQuery({ queryKey: ['intern', 'users'], queryFn: api.intern.users.list, enabled: isAdmin })
 
   const create = useMutation({
     mutationFn: () => api.intern.kunden.create({ kundennummer, name, contact_email: contactEmail || undefined }),
@@ -88,6 +91,19 @@ export default function Kunden() {
               <div>
                 <p className="text-sm text-white">{k.kundennummer} – {k.name}</p>
                 {k.contact_email && <p className="text-xs text-slate-500 mt-0.5">{k.contact_email}</p>}
+                {isAdmin && (() => {
+                  const zugeordnet = users?.filter(u => u.customer_id === k.id) ?? []
+                  return (
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Benutzer:{' '}
+                      {zugeordnet.length === 0 ? (
+                        <span className="text-slate-600">keine zugeordnet</span>
+                      ) : (
+                        <span className="text-slate-400">{zugeordnet.map(u => u.username).join(', ')}</span>
+                      )}
+                    </p>
+                  )
+                })()}
               </div>
               <button
                 onClick={() => toggleActive.mutate({ id: k.id, is_active: !k.is_active })}

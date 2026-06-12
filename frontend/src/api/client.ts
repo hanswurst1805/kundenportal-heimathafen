@@ -427,7 +427,7 @@ export interface InternUserUpdate {
   display_name?: string
   is_active?: boolean
   role?: string
-  customer_id?: string
+  customer_id?: string | null
 }
 
 export interface LeistungCreate {
