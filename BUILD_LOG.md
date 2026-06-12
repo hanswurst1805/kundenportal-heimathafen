@@ -189,3 +189,23 @@ Produktions-Stack, der – anders als `podman-compose.yml` (Entwicklung mit Hot-
 - `.env.example`: um die Prod-Variablen `POSTGRES_DB`/`POSTGRES_USER`/`POSTGRES_PASSWORD` und `SEED_DEMO_DATA` erweitert; Hinweis auf `DOMAIN=:80` für lokale Tests.
 
 **Verifikation**: Voller Prod-Stack lokal gebaut und gestartet (`docker compose -f podman-compose.prod.yml ... up -d --build`, Caddy-Port testweise auf `8080` gemappt, `DOMAIN=:80`). API-Entrypoint führte Migrationen + Demo-Seed aus und startete den Server. Über Caddy verifiziert: `GET /health` → `200 {"status":"ok"}`, `GET /api/v1/portal/leistungen` ohne Token → `401`, `GET /docs` → `200`, `GET /` liefert die SPA (`<title>Kundenportal Heimathafen</title>`), Deep-Link `/intern/kunden` → `200` (History-Fallback). End-to-End: `POST /auth/login` (kunde1) liefert JWT, autorisierter `GET /api/v1/portal/leistungsscheine` liefert den mandantengefilterten Leistungsschein `LS-2026-0001`. Anschließend Stack inkl. Volumes wieder abgebaut.
+
+## Schritt 12: End-to-End-Verifikation (pytest-Integrationstests)
+
+Automatisierte Integrationstests gegen die laufende API (httpx + pytest-asyncio), die die Verifikationspunkte des Plans abdecken. Liegen unter `tests/` (`conftest.py` + `test_integration.py`), laufen gegen `BASE_URL` (Default `http://localhost:8000`) und setzen eine frische DB voraus (einmaliges Admin-2FA-Setup, dessen TOTP-Secret sich nicht wiederherstellen lässt).
+
+- `tests/conftest.py`: session-scoped Fixtures – `client` (httpx), `admin_token` (Admin-Login inkl. einmaligem 2FA-Setup/Enable via `pyotp` + Re-Login über `mfa_required`/`verify`), Hilfsfunktionen `_enable_2fa`/`_login_with_2fa`/`unique`. Admin-Passwort aus `INITIAL_ADMIN_PASSWORD` (Default `change-me`).
+- `tests/test_integration.py` (9 Tests):
+  - **2FA/Login je Rolle**: Admin mit aktivem 2FA, Kunde ohne 2FA-Zwang, interner `user` mit 2FA-Setup
+  - **2FA-Gating**: interner `user` ohne aktiviertes 2FA wird auf internen Endpunkten mit `403` geblockt
+  - **Rollenprüfung**: `user` darf operative Endpunkte (`/intern/anfragen`, `/intern/monitoring/uebersicht`), aber nicht die admin-only Endpunkte (`/intern/statusregeln`, `/intern/users`, `/intern/avv-vorlagen` → `403`); Admin darf alle; Kunde wird auf internen Endpunkten geblockt
+  - **Mandantentrennung**: Kunde B erhält `404` auf Bestellung bzw. AVV-Annahme von Kunde A
+  - **Vollständiger Workflow inkl. aller 9 Trigger**: Bestellung → Signatur (`signature_completed`) → `avv_required` → AVV-Annahme (`avv_completed`) → Auftrag+Leistungsschein (`beauftragt`) → Kick-Off (`kickoff_scheduled`) → Onboarding (`onboarding_workshop_scheduled`) → Protokoll (`onboarding_workshop_finished` → `in_bearbeitung`) → Kundenrückfrage (`customer_input_required` → `warten_auf_kunde`) → Abschluss (`delivery_completed`/`survey_sent` → `kundenzufriedenheitsabfrage`) → automatisch angelegte Umfrage wird vom Kunden beantwortet
+  - **API-Abdeckung**: prüft, dass alle Teilbereiche (Kundensicht + interne Sicht) im OpenAPI-Schema (`/openapi.json`) vorhanden sind
+- `pyproject.toml`: `asyncio_default_fixture_loop_scope = "session"` ergänzt (session-weiter Event-Loop für die Fixtures unter pytest-asyncio 1.x).
+
+**Verifikation**: Auf frischer DB (`alembic downgrade base && alembic upgrade head`, API-Neustart für Bootstrap-Admin) laufen alle 9 Tests grün durch (`python -m pytest tests/ -q` → `9 passed`), sowohl mit explizitem `INITIAL_ADMIN_PASSWORD` als auch out-of-the-box mit dem Default. Reversibilität der Migrationen (`downgrade base`/`upgrade head`) dabei erneut bestätigt. Frontend-Verifikation (`npx tsc -b`, `npx eslint .`, Prod-Build via `Dockerfile.caddy`) bereits in Schritt 9 bzw. 11 erfolgt.
+
+---
+
+**Stand:** Alle 12 Schritte des Implementierungsplans abgeschlossen. Das Kundenportal deckt den kompletten Fachprozess (Anfrage → Angebot → Beauftragung → AVV → Auftrag → Leistungsschein mit Workshops/Aufgaben → Umfrage) mit voller API-Abdeckung je Teilbereich, Adapter-Stubs (Signatur/AVV/Zielsystem/Notification), Statusautomatisierung, 2FA für drei Rollen und einem Podman/Caddy-Produktions-Setup ab.
