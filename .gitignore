@@ -12,6 +12,10 @@ venv/
 .env
 .env.*
 !.env.example
+# Deployment-Konfiguration mit Secrets (Vorlage: deploy/kundenportal.env.example)
+deploy/kundenportal.env
+deploy/*.env
+!deploy/kundenportal.env.example
 
 # Node / Frontend
 node_modules/

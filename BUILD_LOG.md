@@ -209,3 +209,14 @@ Automatisierte Integrationstests gegen die laufende API (httpx + pytest-asyncio)
 ---
 
 **Stand:** Alle 12 Schritte des Implementierungsplans abgeschlossen. Das Kundenportal deckt den kompletten Fachprozess (Anfrage → Angebot → Beauftragung → AVV → Auftrag → Leistungsschein mit Workshops/Aufgaben → Umfrage) mit voller API-Abdeckung je Teilbereich, Adapter-Stubs (Signatur/AVV/Zielsystem/Notification), Statusautomatisierung, 2FA für drei Rollen und einem Podman/Caddy-Produktions-Setup ab.
+
+## Nachtrag: VPS-Deployment mit reinem Podman (ohne compose)
+
+Für die Installation auf einem externen Linux-VPS ohne `podman-compose` – stattdessen mit reinen `podman`-Kommandos – kam ein eigenständiges Deployment-Verzeichnis hinzu:
+
+- `deploy/kundenportal.sh`: parametrierbares Start-/Verwaltungsskript. Startet die drei Container (`<projekt>-db`, `<projekt>-api`, `<projekt>-caddy`) in einem gemeinsamen Podman-Netzwerk mit festen DNS-Aliasen `db`/`api`/`caddy` (passend zu `Caddyfile` → `api:8000` und `DATABASE_URL` → `db:5432`). Befehle: `up`, `down`, `restart`, `update` (Redeploy nach `git pull`), `build`, `status`, `logs [db|api|caddy]`, `migrate`, `seed`, `destroy`, `install-service` (erzeugt eine systemd-Unit für Autostart). Konfiguration aus `deploy/kundenportal.env` (überschreibbar via `--env-file`); Pflichtwerte werden geprüft. Der API-Container wird mit `--entrypoint /app/scripts/entrypoint.sh` gestartet, damit auch unter Podman die Migrationen vor dem Serverstart laufen; alle Container laufen mit `--restart=always`.
+- `deploy/kundenportal.env.example`: Konfigurationsvorlage (DOMAIN, POSTGRES_*, JWT_SECRET, INITIAL_ADMIN_PASSWORD, Adapter-Provider, Ports, SEED_DEMO_DATA, Projekt-/Image-Namen).
+- `deploy/README.md`: Schritt-für-Schritt-Anleitung für den VPS (Podman-Installation, Repo holen, konfigurieren, `up`, systemd-Autostart, Update, Backup, Rootless-Ports-Hinweise).
+- `.gitignore`: `deploy/kundenportal.env` und weitere `deploy/*.env` (Secrets) ausgenommen, nur die `.example`-Vorlage wird versioniert.
+
+**Verifikation**: `bash -n` (Syntax) fehlerfrei; Skriptlogik (Argument-Parsing, Laden/Validieren der Env-Datei, Ableiten der Namen, Reihenfolge `network → volumes → build → db → wait_for_db → api → caddy`, korrekt aufgebaute `podman run`-Kommandos inkl. `--entrypoint`, `--network-alias`, Port-Mappings und `DATABASE_URL=…@db:5432`) gegen ein `podman`-Stub-Skript geprüft; Pflichtwert-Prüfung bricht mit klarer Meldung ab. (Realer Podman-Lauf erfolgt auf dem Ziel-VPS.)
