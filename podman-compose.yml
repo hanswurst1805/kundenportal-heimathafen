@@ -1,0 +1,32 @@
+services:
+  db:
+    image: docker.io/postgres:16
+    environment:
+      POSTGRES_DB: kundenportal
+      POSTGRES_USER: kundenportal
+      POSTGRES_PASSWORD: kundenportal
+    ports:
+      - "5433:5432"
+    volumes:
+      - kundenportal_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kundenportal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://kundenportal:kundenportal@db:5432/kundenportal
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  kundenportal_pgdata:
