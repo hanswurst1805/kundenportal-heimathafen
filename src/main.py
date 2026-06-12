@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.auth import router as auth_router
+from src.api.customer import router as customer_router
+from src.api.internal import router as internal_router
 from src.core.bootstrap import bootstrap_admin
 from src.core.config import settings
 
@@ -35,6 +37,8 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(customer_router)
+app.include_router(internal_router)
 
 
 @app.get("/health")

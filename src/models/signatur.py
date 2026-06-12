@@ -12,6 +12,7 @@ from src.models.base import Base, UUIDPKMixin
 
 # Bezugstypen
 BEZUG_ANGEBOT = "angebot"
+BEZUG_BESTELLUNG = "bestellung"
 BEZUG_AVV = "avv"
 BEZUG_AUFTRAGSBESTAETIGUNG = "auftragsbestaetigung"
 

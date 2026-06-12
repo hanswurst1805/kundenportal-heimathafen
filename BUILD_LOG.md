@@ -57,3 +57,34 @@ Fortlaufende Dokumentation der Implementierungsschritte (siehe Plan unter `fachk
 **Verifikation**: `alembic upgrade head` (inkl. Seed 0002) sowie `alembic downgrade base` + `upgrade head` erfolgreich gegen Postgres 16 (Docker); API-Container-Neustart mit `/health` → 200; Import-Check `from src.automation.events import publish; from src.automation.handlers import HANDLERS` im Container erfolgreich (9 Handler registriert).
 
 **Offen**: Schritt 4 (Kern-Workflow-APIs) muss die Event-Publikation noch verdrahten und die direkten Statuswechsel implementieren.
+
+## Schritt 4: Kern-Workflows (Katalog, Anfrage, Angebot, Bestellung, AVV, Auftrag, Leistungsschein, Monitoring)
+
+- `src/schemas/`: Pydantic-Schemas für alle 16 Fachobjekte (`catalog`, `customer`, `anfrage`, `angebot`, `bestellung`, `signatur`, `avv`, `auftrag`, `leistungsschein` inkl. `Aufgabe`/`Workshop`, `dokument`, `umfrage`, `ereignis`, `status`); je Domäne reduzierte Kundensicht vs. interne Sicht (z. B. `LeistungsscheinKundenSicht`/`LeistungsscheinInternSicht`, `AnfrageOut`/`AnfrageInternOut`)
+- `src/services/signatur_resolve.py`: `resolve_customer_id()` ermittelt den Mandanten eines `Signaturvorgang` anhand von `bezugstyp`/`bezugs_id` (Angebot/Bestellung/AVV/Auftragsbestätigung) für die Mandantenprüfung auf der öffentlichen Signaturseite
+- **Architekturerweiterung**: `Bestellung` erhält einen eigenen Signaturfluss analog zum Angebot (`BEZUG_BESTELLUNG` in `src/models/signatur.py`, `_handle_bestellung_signiert` in `src/automation/handlers.py`): Bestellung → Signatur → ggf. AVV-Prüfung → Auftrag + Leistungsschein. `Bestellung.status` nutzt durchgängig das `KUNDENSTATUS`-Vokabular (Default `warten_auf_signatur`), die alten `BESTELLUNG_*`-Konstanten und die Migration 0001 wurden entsprechend angepasst (noch ungepusht, daher ohne neue Migration)
+- **Kundensicht** (`src/api/customer/`, alle `require_customer` + `ctx.require_customer_scope`):
+  - `catalog.py` – `GET /portal/leistungen` (aktive, bestellbare Leistungen)
+  - `bestellungen.py` – `GET/POST /portal/bestellungen`; `POST` legt Bestellung an und stößt sofort einen Signaturvorgang (`BEZUG_BESTELLUNG`) an
+  - `anfragen.py` – `GET/POST /portal/anfragen`
+  - `angebote.py` – `GET /portal/angebote`, `POST /portal/angebote/{id}/ablehnen` (storniert Signaturvorgang, setzt Ursprung auf `storniert`)
+  - `signatur.py` – `GET /portal/signatur/{token}`, `POST /portal/signatur/{token}/signieren` (Stub-Signaturseite, löst `signature_completed` aus)
+  - `avv.py` – `GET /portal/avv`, `POST /portal/avv/{id}/annehmen` (löst `avv_completed` aus)
+  - `dokumente.py`, `auftraege.py` (inkl. `POST .../auftragsbestaetigung/kenntnisnahme`), `leistungsscheine.py` (reduzierte Sicht inkl. Aufgaben/Workshops), `umfragen.py` (`POST .../beantworten`), `dashboard.py` (Übersicht offener Vorgänge)
+  - `src/api/customer/__init__.py` aggregiert alle Router unter `/api/v1/portal`
+- **Interne Sicht** (`src/api/internal/`, `require_role("user", "admin")` sofern nicht anders angegeben):
+  - `anfragen.py` – Fachbereichszuordnung/Status (`PATCH`), `POST /{id}/angebot` erzeugt Angebot inkl. Positionen und verknüpft die Anfrage
+  - `angebote.py` – `POST /{id}/bereitstellen` (Status → `bereitgestellt`, Ursprung → `warten_auf_signatur`, stößt Signaturvorgang für `BEZUG_ANGEBOT` an)
+  - `bestellungen.py`, `auftraege.py` (inkl. Auftragsbestätigung) – Monitoring/Read-Only
+  - `leistungsscheine.py` – `PATCH` (interne Felder), Aufgaben-CRUD, `POST /{id}/kundenrueckfrage` (→ `customer_input_required`), `POST /{id}/abschliessen` (→ `delivery_completed`, legt automatisch Umfrage an)
+  - `workshops.py` – Workshop-CRUD je Leistungsschein; `typ=kickoff` löst beim Anlegen `kickoff_scheduled` aus, `typ=onboarding` beim Anlegen `onboarding_workshop_scheduled` und beim Setzen auf `protokoll_freigegeben` zusätzlich `onboarding_workshop_finished`
+  - `avv.py` – Monitoring (`GET /avv`) + `avv-vorlagen`-Verwaltung (admin-only via separatem Sub-Router)
+  - `signaturen.py` – Monitoring, `POST /{id}/erinnerung`, `POST /{id}/retry`
+  - `monitoring.py` – `GET /uebersicht` (offene Anfragen/Bestellungen/Leistungsscheine, unverarbeitete Ereignisse), `GET /ereignisse` (Filter nach `verarbeitet`/`ereignis_typ`)
+  - `kunden.py`, `leistungen.py` (Katalogpflege) – CRUD
+  - `umfragen.py` – Reporting (Read-Only)
+  - `statusregeln.py`, `users.py` (inkl. Passwort-/2FA-Reset) – admin-only via `require_role("admin")`
+  - `src/api/internal/__init__.py` aggregiert alle Router unter `/api/v1/intern`
+- `src/main.py`: Kunden- und interne Router eingebunden (insgesamt 70 Endpunkte laut OpenAPI-Schema)
+
+**Verifikation**: API-Container-Neustart ohne Fehler, `/health` → 200, `/openapi.json` listet alle 70 erwarteten Pfade unter `/api/v1/portal/*`, `/api/v1/intern/*` und `/auth/*`. `scripts/e2e_check.py` (manuelles Verifikationsskript, kein Teil der Test-Suite) durchläuft den vollständigen Kernworkflow erfolgreich: Admin-Login mit 2FA-Setup, Anlage Leistung (AVV-Pflicht) + AVV-Vorlage + Kunde + Kunden-User, Bestellung → Signatur → `avv_ausstehend` → AVV-Annahme → `beauftragt` (Auftrag + Leistungsschein automatisch angelegt) → Kick-Off-Workshop (`kickoff_gestartet`) → Onboarding-Workshop (`onboarding_workshop` → Protokollfreigabe → `in_bearbeitung`) → Kundenrückfrage (`warten_auf_kunde`) → Abschluss (`kundenzufriedenheitsabfrage`, Umfrage automatisch versendet) → Umfrage beantwortet → Monitoring-Übersicht zeigt korrekte Zahlen.

@@ -23,10 +23,11 @@ from src.core.status_codes import (
 from src.models.angebot import ANGEBOT_ANGENOMMEN, Angebot
 from src.models.auftrag import Auftragsbestaetigung
 from src.models.avv import AVV, AVV_ABGESCHLOSSEN, AVVVorlage
+from src.models.bestellung import Bestellung
 from src.models.ereignis import Ereignisprotokoll
 from src.models.leistung import Leistung
 from src.models.leistungsschein import Leistungsschein
-from src.models.signatur import BEZUG_ANGEBOT, BEZUG_AUFTRAGSBESTAETIGUNG, BEZUG_AVV
+from src.models.signatur import BEZUG_ANGEBOT, BEZUG_AUFTRAGSBESTAETIGUNG, BEZUG_AVV, BEZUG_BESTELLUNG
 from src.models.umfrage import UMFRAGE_GEPLANT, UMFRAGE_VERSENDET, Umfrage
 from src.services.auftrag_service import create_auftrag_und_leistungsschein
 from src.services.origin import find_origin_for_angebot, set_origin_status
@@ -91,6 +92,48 @@ async def _handle_angebot_signiert(session: AsyncSession, eintrag: Ereignisproto
             set_origin_status(origin, "beauftragt")
 
 
+async def _handle_bestellung_signiert(session: AsyncSession, eintrag: Ereignisprotokoll) -> None:
+    bestellung = await session.get(Bestellung, eintrag.bezugs_id)
+    if not bestellung:
+        return
+
+    leistung = (
+        await session.get(Leistung, bestellung.leistung_id) if bestellung.leistung_id else None
+    )
+    avv_pflicht = await get_avv_workflow().determine_requirement(leistung) if leistung else False
+
+    bestehende_avv = (
+        await session.execute(
+            select(AVV).where(AVV.bezugstyp == BEZUG_BESTELLUNG, AVV.bezugs_id == bestellung.id)
+        )
+    ).scalar_one_or_none()
+
+    if avv_pflicht and (not bestehende_avv or bestehende_avv.status != AVV_ABGESCHLOSSEN):
+        from src.automation.events import publish
+
+        await publish(
+            session,
+            EVENT_AVV_REQUIRED,
+            customer_id=bestellung.customer_id,
+            bezugstyp=BEZUG_BESTELLUNG,
+            bezugs_id=bestellung.id,
+            payload={"bestellung_id": str(bestellung.id)},
+        )
+        eintrag.nachher_status = "avv_ausstehend"
+        eintrag.customer_id = bestellung.customer_id
+        bestellung.status = "avv_ausstehend"
+    else:
+        await create_auftrag_und_leistungsschein(
+            session,
+            customer_id=bestellung.customer_id,
+            origin=bestellung,
+            leistung_id=bestellung.leistung_id,
+        )
+        eintrag.nachher_status = "beauftragt"
+        eintrag.customer_id = bestellung.customer_id
+        bestellung.status = "beauftragt"
+
+
 async def _handle_avv_signiert(session: AsyncSession, eintrag: Ereignisprotokoll) -> None:
     """Wird sowohl als 'signature_completed' (bezugstyp=avv) als auch direkt
     als 'avv_completed' aufgerufen; bezugs_id ist in beiden Faellen die AVV-ID."""
@@ -100,18 +143,26 @@ async def _handle_avv_signiert(session: AsyncSession, eintrag: Ereignisprotokoll
     avv.status = AVV_ABGESCHLOSSEN
     avv.abschlussdatum = date.today()
 
-    angebot = (
-        await session.get(Angebot, avv.bezugs_id) if avv.bezugstyp == BEZUG_ANGEBOT else None
-    )
-    origin = await find_origin_for_angebot(session, angebot) if angebot else None
-    leistung_id = angebot.leistung_id if angebot else None
+    origin = None
+    leistung_id = None
+    scope_beschreibung = None
+    if avv.bezugstyp == BEZUG_ANGEBOT:
+        angebot = await session.get(Angebot, avv.bezugs_id)
+        if angebot:
+            origin = await find_origin_for_angebot(session, angebot)
+            leistung_id = angebot.leistung_id
+            scope_beschreibung = angebot.titel
+    elif avv.bezugstyp == BEZUG_BESTELLUNG:
+        origin = await session.get(Bestellung, avv.bezugs_id)
+        if origin:
+            leistung_id = origin.leistung_id
 
     await create_auftrag_und_leistungsschein(
         session,
         customer_id=avv.customer_id,
         origin=origin,
         leistung_id=leistung_id,
-        scope_beschreibung=angebot.titel if angebot else None,
+        scope_beschreibung=scope_beschreibung,
     )
     eintrag.nachher_status = "beauftragt"
     eintrag.customer_id = avv.customer_id
@@ -122,6 +173,8 @@ async def _handle_avv_signiert(session: AsyncSession, eintrag: Ereignisprotokoll
 async def _handle_signature_completed(session: AsyncSession, eintrag: Ereignisprotokoll) -> None:
     if eintrag.bezugstyp == BEZUG_ANGEBOT:
         await _handle_angebot_signiert(session, eintrag)
+    elif eintrag.bezugstyp == BEZUG_BESTELLUNG:
+        await _handle_bestellung_signiert(session, eintrag)
     elif eintrag.bezugstyp == BEZUG_AVV:
         await _handle_avv_signiert(session, eintrag)
     elif eintrag.bezugstyp == BEZUG_AUFTRAGSBESTAETIGUNG:
@@ -135,9 +188,18 @@ async def _handle_signature_completed(session: AsyncSession, eintrag: Ereignispr
 
 
 async def _handle_avv_required(session: AsyncSession, eintrag: Ereignisprotokoll) -> None:
-    angebot = await session.get(Angebot, eintrag.bezugs_id)
-    if not angebot:
-        return
+    customer_id = eintrag.customer_id
+    if eintrag.bezugstyp == BEZUG_BESTELLUNG:
+        bestellung = await session.get(Bestellung, eintrag.bezugs_id)
+        if not bestellung:
+            return
+        customer_id = bestellung.customer_id
+    else:
+        angebot = await session.get(Angebot, eintrag.bezugs_id)
+        if not angebot:
+            return
+        customer_id = angebot.customer_id
+
     vorlage = (
         (await session.execute(select(AVVVorlage).where(AVVVorlage.is_active.is_(True))))
         .scalars()
@@ -145,13 +207,13 @@ async def _handle_avv_required(session: AsyncSession, eintrag: Ereignisprotokoll
     )
     await get_avv_workflow().create_avv(
         session,
-        customer_id=angebot.customer_id,
-        bezugstyp=BEZUG_ANGEBOT,
-        bezugs_id=angebot.id,
+        customer_id=customer_id,
+        bezugstyp=eintrag.bezugstyp,
+        bezugs_id=eintrag.bezugs_id,
         vorlage=vorlage,
     )
     eintrag.nachher_status = "avv_ausstehend"
-    eintrag.customer_id = angebot.customer_id
+    eintrag.customer_id = customer_id
 
 
 async def _handle_kickoff_scheduled(session: AsyncSession, eintrag: Ereignisprotokoll) -> None:
