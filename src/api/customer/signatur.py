@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +17,27 @@ from src.services.signatur_resolve import resolve_customer_id
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/signatur", tags=["portal-signatur"])
+
+
+@router.get("/by-bezug/{bezugstyp}/{bezugs_id}", response_model=list[SignaturvorgangOut])
+async def list_signaturvorgaenge_fuer_bezug(
+    bezugstyp: str,
+    bezugs_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    ctx: AuthContext = Depends(require_customer),
+):
+    vorgaenge = (
+        await session.execute(
+            select(Signaturvorgang)
+            .where(Signaturvorgang.bezugstyp == bezugstyp, Signaturvorgang.bezugs_id == bezugs_id)
+            .order_by(Signaturvorgang.created_at.desc())
+        )
+    ).scalars().all()
+    if vorgaenge:
+        customer_id = await resolve_customer_id(session, vorgaenge[0])
+        if customer_id:
+            ctx.require_customer_scope(customer_id)
+    return vorgaenge
 
 
 @router.get("/{token}", response_model=SignaturvorgangOut)

@@ -102,3 +102,27 @@ Fortlaufende Dokumentation der Implementierungsschritte (siehe Plan unter `fachk
 - `Dockerfile.frontend` (Node 22, `npm run dev -- --host`) + `podman-compose.yml`: neuer `frontend`-Service (Port 5173), Named Volume für `node_modules` getrennt vom Bind-Mount des Quellcodes
 
 **Verifikation**: `docker compose -f podman-compose.yml build frontend` erfolgreich; `npx tsc -b` und `npx eslint .` im Container ohne Fehler/Warnungen; `docker compose -f podman-compose.yml up -d` startet `db`/`api`/`frontend` zusammen, Vite-Dev-Server erreichbar unter `:5173`; Proxy-Test bestätigt `/auth/login` und `/api/v1/*` werden korrekt an den `api`-Container weitergeleitet (Login liefert `mfa_required` für den 2FA-pflichtigen Admin-Account).
+
+## Schritt 8: Frontend Kundensicht
+
+- `src/lib/format.ts`: Formatierungshelfer `formatCurrency` (EUR, `de-DE`), `formatDate`/`formatDateTime` (`de-DE`, Fallback `–` bei `null`/`undefined`)
+- `src/components/StatusBadge.tsx`: Badge-Komponente für alle 15 `KUNDENSTATUS`-Werte mit deutschem Label und Farbcodierung (slate/indigo/amber/sky/emerald/red)
+- `src/pages/customer/Dashboard.tsx` (`/portal`): Übersicht „Offene Bestellungen“, „Offene Anfragen“, „Laufende Leistungsscheine“ (mit Link zur Detailseite) via `GET /portal/dashboard`
+- `src/pages/customer/Katalog.tsx` (`/portal/katalog`): Leistungskatalog als Kartenraster (Name, Kategorie, Beschreibung, Preis, AVV-Pflicht-Hinweis), „Bestellen“ löst `POST /portal/bestellungen` aus und navigiert zu „Aufträge“
+- `src/pages/customer/Anfragen.tsx` (`/portal/anfragen`): Formular „Neue Anfrage“ (Thema, Beschreibung, Fachbereich, Priorität) via `POST /portal/anfragen` sowie Liste „Meine Anfragen“ mit `StatusBadge`
+- `src/pages/customer/Angebote.tsx` (`/portal/angebote`): Angebotsdetails inkl. Positionstabelle und Gesamtpreis; bei Status `bereitgestellt` Ermittlung des zugehörigen Signaturvorgangs über das neue Endpoint `GET /portal/signatur/by-bezug/{bezugstyp}/{bezugs_id}` und Anzeige von „Zur Signatur“-Link bzw. „Ablehnen“-Button (`POST /portal/angebote/{id}/ablehnen`)
+- `src/pages/customer/AVV.tsx` (`/portal/avv`): Liste aller AVV-Vorgänge mit Status-Icons, „AVV annehmen“-Button bei Status `ausstehend` (`POST /portal/avv/{id}/annehmen`)
+- `src/pages/customer/Auftraege.tsx` (`/portal/auftraege`): Auftragsliste mit `StatusBadge`; pro Auftrag wird die Auftragsbestätigung über das neue Endpoint `GET /portal/auftraege/{id}/auftragsbestaetigung` geladen und ggf. ein „Zur Kenntnis nehmen“-Button (`POST .../kenntnisnahme`) angezeigt
+- `src/pages/customer/Leistungsscheine.tsx` (`/portal/leistungsscheine`): Listenansicht (Nummer, Scope-Beschreibung, Solltermin, `StatusBadge`), verlinkt auf Detailseite
+- `src/pages/customer/LeistungsscheinDetail.tsx` (`/portal/leistungsscheine/:id`): Detailansicht mit allgemeinen Feldern (Termine, nächster Schritt, Voraussetzungen, Onboarding-Ziele/offene Punkte), Aufgabenliste (Status-Labels `offen`/`in_bearbeitung`/`erledigt`/`blockiert`) und Workshop-Liste (Typ `kickoff`/`onboarding`, Status `geplant`/`durchgefuehrt`/`protokoll_freigegeben`/`verschoben`)
+- `src/pages/customer/Dokumente.tsx` (`/portal/dokumente`): Liste aller für den Kunden sichtbaren Dokumente (Dateiname, Typ, Erstellungsdatum)
+- `src/pages/customer/Umfragen.tsx` (`/portal/umfragen`): Liste der Kundenzufriedenheitsabfragen; unbeantwortete Umfragen mit Stern-Bewertung (1-5) + optionalem Kommentar via `POST /portal/umfragen/{id}/beantworten`, beantwortete Umfragen read-only
+- `src/pages/customer/Signatur.tsx` (`/portal/signatur/:token`): Stub-Signaturseite – zeigt Status (`erstellt`/`versendet`/`signiert`/`abgelehnt`/`fehler`/`abgelaufen`) und bei `erstellt`/`versendet` einen „Jetzt signieren“-Button (`POST /portal/signatur/{token}/signieren`)
+- `src/App.tsx`: alle `<Placeholder>`-Routen unter `/portal/*` durch die neuen Seiten ersetzt, neue Routen `/portal/leistungsscheine/:id` und `/portal/signatur/:token` ergänzt
+
+### Neue Backend-Endpunkte (API-Lückenschluss für Frontend)
+
+- `src/api/customer/signatur.py`: `GET /portal/signatur/by-bezug/{bezugstyp}/{bezugs_id}` – ermittelt Signaturvorgänge zu einem Angebot/einer Bestellung (mandantengeprüft), damit das Portal den Signatur-Token zum Anzeigen des „Zur Signatur“-Links auflösen kann
+- `src/api/customer/auftraege.py`: `GET /portal/auftraege/{auftrag_id}/auftragsbestaetigung` – liefert die Auftragsbestätigung zu einem Auftrag (mandantengeprüft, 404 falls noch nicht erstellt), Pendant zum internen Endpoint
+
+**Verifikation**: `npx tsc -b` und `npx eslint .` im `frontend`-Container ohne Fehler/Warnungen; `docker compose -f podman-compose.yml up -d db api frontend` startet alle drei Container fehlerfrei, Vite-Dev-Server liefert weiterhin unter `:5173`.

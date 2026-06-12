@@ -39,6 +39,27 @@ async def get_auftrag(
     return auftrag
 
 
+@router.get("/{auftrag_id}/auftragsbestaetigung", response_model=AuftragsbestaetigungOut)
+async def get_auftragsbestaetigung(
+    auftrag_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    ctx: AuthContext = Depends(require_customer),
+):
+    auftrag = await session.get(Auftrag, auftrag_id)
+    if not auftrag:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nicht gefunden")
+    ctx.require_customer_scope(auftrag.customer_id)
+
+    bestaetigung = (
+        await session.execute(
+            select(Auftragsbestaetigung).where(Auftragsbestaetigung.auftrag_id == auftrag.id)
+        )
+    ).scalar_one_or_none()
+    if not bestaetigung:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nicht gefunden")
+    return bestaetigung
+
+
 @router.post("/{auftrag_id}/auftragsbestaetigung/kenntnisnahme", response_model=AuftragsbestaetigungOut)
 async def kenntnisnahme(
     auftrag_id: uuid.UUID,

@@ -6,6 +6,17 @@ import InternalLayout from './components/InternalLayout'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
 import Placeholder from './pages/Placeholder'
+import Dashboard from './pages/customer/Dashboard'
+import Katalog from './pages/customer/Katalog'
+import Anfragen from './pages/customer/Anfragen'
+import Angebote from './pages/customer/Angebote'
+import AVV from './pages/customer/AVV'
+import Auftraege from './pages/customer/Auftraege'
+import Leistungsscheine from './pages/customer/Leistungsscheine'
+import LeistungsscheinDetail from './pages/customer/LeistungsscheinDetail'
+import Dokumente from './pages/customer/Dokumente'
+import Umfragen from './pages/customer/Umfragen'
+import Signatur from './pages/customer/Signatur'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -29,18 +40,20 @@ function CustomerRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/portal" replace />} />
-      <Route path="/portal" element={<CustomerLayout><Placeholder title="Übersicht" /></CustomerLayout>} />
-      <Route path="/portal/katalog" element={<CustomerLayout><Placeholder title="Katalog" /></CustomerLayout>} />
-      <Route path="/portal/anfragen" element={<CustomerLayout><Placeholder title="Anfragen" /></CustomerLayout>} />
-      <Route path="/portal/angebote" element={<CustomerLayout><Placeholder title="Angebote" /></CustomerLayout>} />
-      <Route path="/portal/avv" element={<CustomerLayout><Placeholder title="AVV" /></CustomerLayout>} />
-      <Route path="/portal/auftraege" element={<CustomerLayout><Placeholder title="Aufträge" /></CustomerLayout>} />
+      <Route path="/portal" element={<CustomerLayout><Dashboard /></CustomerLayout>} />
+      <Route path="/portal/katalog" element={<CustomerLayout><Katalog /></CustomerLayout>} />
+      <Route path="/portal/anfragen" element={<CustomerLayout><Anfragen /></CustomerLayout>} />
+      <Route path="/portal/angebote" element={<CustomerLayout><Angebote /></CustomerLayout>} />
+      <Route path="/portal/avv" element={<CustomerLayout><AVV /></CustomerLayout>} />
+      <Route path="/portal/auftraege" element={<CustomerLayout><Auftraege /></CustomerLayout>} />
+      <Route path="/portal/leistungsscheine" element={<CustomerLayout><Leistungsscheine /></CustomerLayout>} />
       <Route
-        path="/portal/leistungsscheine"
-        element={<CustomerLayout><Placeholder title="Leistungsscheine" /></CustomerLayout>}
+        path="/portal/leistungsscheine/:id"
+        element={<CustomerLayout><LeistungsscheinDetail /></CustomerLayout>}
       />
-      <Route path="/portal/dokumente" element={<CustomerLayout><Placeholder title="Dokumente" /></CustomerLayout>} />
-      <Route path="/portal/umfragen" element={<CustomerLayout><Placeholder title="Umfragen" /></CustomerLayout>} />
+      <Route path="/portal/dokumente" element={<CustomerLayout><Dokumente /></CustomerLayout>} />
+      <Route path="/portal/umfragen" element={<CustomerLayout><Umfragen /></CustomerLayout>} />
+      <Route path="/portal/signatur/:token" element={<CustomerLayout><Signatur /></CustomerLayout>} />
       <Route path="/einstellungen" element={<CustomerLayout><Settings /></CustomerLayout>} />
       <Route path="*" element={<Navigate to="/portal" replace />} />
     </Routes>
