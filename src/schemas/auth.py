@@ -22,6 +22,7 @@ class MFAVerifyRequest(BaseModel):
 class TOTPSetupResponse(BaseModel):
     secret: str
     provisioning_uri: str
+    qr_code: str  # SVG-Data-URI (base64) des QR-Codes zum Scannen
 
 
 class TOTPEnableRequest(BaseModel):

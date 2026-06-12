@@ -9,6 +9,7 @@ export default function Settings() {
 
   const [setupSecret, setSetupSecret] = useState<string | null>(null)
   const [setupUri, setSetupUri] = useState<string | null>(null)
+  const [setupQr, setSetupQr] = useState<string | null>(null)
   const [enableCode, setEnableCode] = useState('')
   const [disableCode, setDisableCode] = useState('')
   const [backupCodes, setBackupCodes] = useState<string[] | null>(null)
@@ -24,6 +25,7 @@ export default function Settings() {
       const setup = await api.auth.setup2FA()
       setSetupSecret(setup.secret)
       setSetupUri(setup.provisioning_uri)
+      setSetupQr(setup.qr_code)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Setup fehlgeschlagen')
     }
@@ -37,6 +39,7 @@ export default function Settings() {
       setBackupCodes(result.backup_codes)
       setSetupSecret(null)
       setSetupUri(null)
+      setSetupQr(null)
       setEnableCode('')
       await queryClient.invalidateQueries({ queryKey: ['me'] })
     } catch (e) {
@@ -144,9 +147,22 @@ export default function Settings() {
 
             {setupSecret && (
               <form onSubmit={confirmEnable} className="space-y-3">
+                {setupQr && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-slate-400">
+                      QR-Code mit der Authenticator-App scannen:
+                    </p>
+                    <img
+                      src={setupQr}
+                      alt="QR-Code für die Zwei-Faktor-Authentifizierung"
+                      className="w-44 h-44 rounded-lg bg-white p-2"
+                    />
+                  </div>
+                )}
                 <div className="text-sm text-slate-400 space-y-1">
                   <p>
-                    Secret manuell in der Authenticator-App hinterlegen:
+                    Falls Scannen nicht möglich ist, das Secret manuell in der
+                    Authenticator-App hinterlegen:
                   </p>
                   <p className="font-mono text-xs bg-slate-800 rounded-lg px-3 py-2 break-all text-slate-200">
                     {setupSecret}

@@ -62,6 +62,25 @@ def totp_provisioning_uri(secret: str, username: str) -> str:
     return pyotp.totp.TOTP(secret).provisioning_uri(name=username, issuer_name="Kundenportal Heimathafen")
 
 
+def totp_qr_data_uri(provisioning_uri: str) -> str:
+    """Rendert die otpauth-URI als scanbaren QR-Code und gibt ihn als
+    SVG-Data-URI (base64) zurueck, der direkt in ein <img>-Tag passt.
+
+    Bewusst die reine-Python-SVG-Factory (stdlib ElementTree) – so wird keine
+    zusaetzliche Bild-Bibliothek (Pillow/pypng) benoetigt."""
+    import base64
+    import io
+
+    import qrcode
+    import qrcode.image.svg
+
+    img = qrcode.make(provisioning_uri, image_factory=qrcode.image.svg.SvgImage)
+    buffer = io.BytesIO()
+    img.save(buffer)
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
+
+
 def verify_totp_code(secret: str, code: str) -> bool:
     return pyotp.totp.TOTP(secret).verify(code.strip().replace(" ", ""), valid_window=1)
 

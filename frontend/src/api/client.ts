@@ -73,6 +73,7 @@ export interface UserMe {
 export interface TOTPSetup {
   secret: string
   provisioning_uri: string
+  qr_code: string
 }
 
 export interface TOTPEnableResult {

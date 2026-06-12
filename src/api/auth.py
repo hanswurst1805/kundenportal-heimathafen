@@ -19,6 +19,7 @@ from src.core.auth import (
     hash_backup_codes,
     hash_password,
     totp_provisioning_uri,
+    totp_qr_data_uri,
     verify_password,
     verify_totp_code,
 )
@@ -113,7 +114,12 @@ async def setup_2fa(
     secret = generate_totp_secret()
     user.totp_secret = secret
     await session.flush()
-    return TOTPSetupResponse(secret=secret, provisioning_uri=totp_provisioning_uri(secret, user.username))
+    provisioning_uri = totp_provisioning_uri(secret, user.username)
+    return TOTPSetupResponse(
+        secret=secret,
+        provisioning_uri=provisioning_uri,
+        qr_code=totp_qr_data_uri(provisioning_uri),
+    )
 
 
 @router.post("/2fa/enable", response_model=TOTPEnableResponse)
