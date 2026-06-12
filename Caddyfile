@@ -1,0 +1,25 @@
+# Reverse-Proxy fuer das Kundenportal Heimathafen.
+#
+# {$DOMAIN} wird aus der Umgebungsvariable DOMAIN gelesen (siehe .env).
+# - Echter Domainname (z.B. heihaf.kiste.org) -> Caddy holt automatisch ein
+#   Let's-Encrypt-Zertifikat und erzwingt HTTPS.
+# - Fuer lokale Tests ohne TLS: DOMAIN=:80 setzen.
+#
+# Backend-Pfade (/api/*, /auth/*, /health, /docs, /openapi.json, /redoc) gehen
+# an den API-Container; alles andere wird als statisches Frontend (SPA)
+# ausgeliefert (History-API-Fallback auf index.html).
+
+{$DOMAIN} {
+	encode gzip zstd
+
+	@backend path /api/* /auth/* /health /docs /openapi.json /redoc
+	handle @backend {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

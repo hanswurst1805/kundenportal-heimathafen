@@ -177,3 +177,15 @@ Alle `<Placeholder>`-Routen unter `/intern/*` durch die neuen Seiten ersetzt, ne
 - Idempotenz: das Skript bricht ab, wenn Kunde `K-1001` bereits existiert.
 
 **Verifikation**: `alembic downgrade base && alembic upgrade head` läuft fehlerfrei durch (Reversibilität bestätigt; Migration `0002` seedet die StatusRegel-Konfiguration). `python scripts/seed_demo_data.py` im `api`-Container legt den Bestand an; Kontrolle per `psql` bestätigt Leistungsschein `LS-2026-0001` im Status `in_bearbeitung`, zwei Workshops (`kickoff`=geplant, `onboarding`=protokoll_freigegeben), drei Aufgaben, AVV `abgeschlossen`, Anfrage `in_pruefung`. Zweiter Aufruf bricht idempotent ab.
+
+## Schritt 11: Deployment-Vorbereitung (Podman/Caddy)
+
+Produktions-Stack, der – anders als `podman-compose.yml` (Entwicklung mit Hot-Reload/Code-Volumes) – alle Images aus dem Quellcode baut und ohne Code-Mounts läuft.
+
+- `scripts/entrypoint.sh`: Produktions-Entrypoint des API-Containers – führt `alembic upgrade head` aus, optional `seed_demo_data.py` bei `SEED_DEMO_DATA=true`, startet dann `uvicorn` ohne `--reload`. In der `Dockerfile` per `chmod +x` ausführbar gemacht.
+- `Caddyfile`: Reverse-Proxy für `{$DOMAIN}` (aus `.env`). Backend-Pfade (`/api/*`, `/auth/*`, `/health`, `/docs`, `/openapi.json`, `/redoc`) → `api:8000`; alles andere als statisches SPA-Frontend mit History-Fallback auf `index.html`. Echter Domainname → automatisches Let's-Encrypt-TLS; `DOMAIN=:80` für lokale Tests ohne TLS. Da der Frontend-API-Client relative Pfade (`/api/v1`, `/auth`) nutzt, ist kein Build-Zeit-API-URL-Konfig nötig.
+- `Dockerfile.caddy`: Multi-Stage-Build – Stage 1 baut das Vite-Frontend (`npm run build` → `dist/`), Stage 2 (`caddy:2-alpine`) übernimmt `dist/` nach `/srv` und die `Caddyfile`. Ein einziges Image liefert Frontend **und** Reverse-Proxy.
+- `podman-compose.prod.yml`: Services `db` (PostgreSQL 16, kein Host-Port, persistentes Volume, `restart: unless-stopped`), `api` (Build aus `Dockerfile`, Entrypoint mit Migrationen, Secrets aus `.env` via `${VAR:?}`-Pflichtprüfung), `caddy` (Ports 80/443, Volumes `caddy_data`/`caddy_config` für Zertifikate). DB-URL wird im Prod-Stack aus `POSTGRES_*` zusammengesetzt.
+- `.env.example`: um die Prod-Variablen `POSTGRES_DB`/`POSTGRES_USER`/`POSTGRES_PASSWORD` und `SEED_DEMO_DATA` erweitert; Hinweis auf `DOMAIN=:80` für lokale Tests.
+
+**Verifikation**: Voller Prod-Stack lokal gebaut und gestartet (`docker compose -f podman-compose.prod.yml ... up -d --build`, Caddy-Port testweise auf `8080` gemappt, `DOMAIN=:80`). API-Entrypoint führte Migrationen + Demo-Seed aus und startete den Server. Über Caddy verifiziert: `GET /health` → `200 {"status":"ok"}`, `GET /api/v1/portal/leistungen` ohne Token → `401`, `GET /docs` → `200`, `GET /` liefert die SPA (`<title>Kundenportal Heimathafen</title>`), Deep-Link `/intern/kunden` → `200` (History-Fallback). End-to-End: `POST /auth/login` (kunde1) liefert JWT, autorisierter `GET /api/v1/portal/leistungsscheine` liefert den mandantengefilterten Leistungsschein `LS-2026-0001`. Anschließend Stack inkl. Volumes wieder abgebaut.

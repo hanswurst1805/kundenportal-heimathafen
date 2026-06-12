@@ -1,0 +1,16 @@
+# Multi-Stage-Build: baut das Vite-Frontend und liefert es zusammen mit dem
+# Caddy-Reverse-Proxy in einem einzigen Produktions-Image aus.
+
+# 1) Frontend-Build
+FROM node:22-slim AS frontend-build
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install
+COPY frontend ./
+RUN npm run build
+
+# 2) Caddy mit statischem Frontend + Reverse-Proxy-Konfiguration
+FROM docker.io/caddy:2-alpine
+COPY --from=frontend-build /app/dist /srv
+COPY Caddyfile /etc/caddy/Caddyfile
+EXPOSE 80 443

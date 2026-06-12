@@ -1,0 +1,70 @@
+# Produktions-Stack des Kundenportals Heimathafen.
+#
+# Start:
+#   cp .env.example .env   # und Werte anpassen (POSTGRES_PASSWORD, JWT_SECRET,
+#                          # INITIAL_ADMIN_PASSWORD, DOMAIN ...)
+#   podman-compose -f podman-compose.prod.yml up -d --build
+#
+# - db:    PostgreSQL 16, nur im internen Netz (kein Host-Port), persistentes Volume
+# - api:   FastAPI/uvicorn; fuehrt beim Start `alembic upgrade head` aus (Entrypoint)
+# - caddy: Reverse-Proxy + statisches Frontend, terminiert HTTPS fuer ${DOMAIN}
+#
+# Im Gegensatz zu podman-compose.yml (Entwicklung) gibt es hier keine
+# Code-Volumes/Hot-Reload; alle Images werden aus dem Quellcode gebaut.
+
+services:
+  db:
+    image: docker.io/postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kundenportal}
+      POSTGRES_USER: ${POSTGRES_USER:-kundenportal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD muss in .env gesetzt sein}
+    volumes:
+      - kundenportal_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kundenportal}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build: .
+    entrypoint: ["/app/scripts/entrypoint.sh"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-kundenportal}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-kundenportal}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET muss in .env gesetzt sein}
+      JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-8}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD muss in .env gesetzt sein}
+      SIGNATURE_PROVIDER: ${SIGNATURE_PROVIDER:-stub}
+      AVV_PROVIDER: ${AVV_PROVIDER:-stub}
+      TARGET_SYSTEM_PROVIDER: ${TARGET_SYSTEM_PROVIDER:-stub}
+      NOTIFICATION_PROVIDER: ${NOTIFICATION_PROVIDER:-stub}
+      DOMAIN: ${DOMAIN:-heihaf.kiste.org}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    environment:
+      DOMAIN: ${DOMAIN:-heihaf.kiste.org}
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  kundenportal_pgdata:
+  caddy_data:
+  caddy_config:
