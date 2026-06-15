@@ -1,10 +1,17 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { Anchor, KeyRound } from 'lucide-react'
 
+// Nur interne Pfade als Redirect-Ziel zulassen (kein offener Redirect).
+function sicheresZiel(redirect: string | null): string | null {
+  if (!redirect || !redirect.startsWith('/') || redirect.startsWith('//')) return null
+  return redirect
+}
+
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
@@ -14,12 +21,13 @@ export default function Login() {
 
   async function afterLogin() {
     const me = await api.auth.me()
+    const ziel = sicheresZiel(searchParams.get('redirect'))
     if (me.role === 'kunde') {
-      navigate('/portal')
+      navigate(ziel ?? '/portal')
     } else if (me.totp_required && !me.totp_enabled) {
       navigate('/einstellungen')
     } else {
-      navigate('/intern')
+      navigate(ziel ?? '/intern')
     }
   }
 

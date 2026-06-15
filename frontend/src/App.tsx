@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { api, type UserMe } from './api/client'
 import CustomerLayout from './components/CustomerLayout'
@@ -39,6 +39,7 @@ const queryClient = new QueryClient({
 })
 
 function AuthGate({ children }: { children: (me: UserMe) => React.ReactNode }) {
+  const location = useLocation()
   const token = api.auth.getToken()
   const { data: me, isLoading } = useQuery({
     queryKey: ['me'],
@@ -46,7 +47,11 @@ function AuthGate({ children }: { children: (me: UserMe) => React.ReactNode }) {
     enabled: !!token,
   })
 
-  if (!token) return <Navigate to="/login" replace />
+  if (!token) {
+    const ziel = location.pathname + location.search
+    const suffix = ziel && ziel !== '/' ? `?redirect=${encodeURIComponent(ziel)}` : ''
+    return <Navigate to={`/login${suffix}`} replace />
+  }
   if (isLoading || !me) return <div className="min-h-screen bg-slate-950" />
 
   return <>{children(me)}</>

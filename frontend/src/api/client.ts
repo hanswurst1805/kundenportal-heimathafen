@@ -35,7 +35,10 @@ async function req<T>(path: string, opts?: RequestInit & { auth?: boolean }): Pr
     localStorage.removeItem('token')
     localStorage.removeItem('role')
     localStorage.removeItem('customer_id')
-    window.location.href = '/login'
+    if (window.location.pathname !== '/login') {
+      const ziel = window.location.pathname + window.location.search
+      window.location.href = `/login?redirect=${encodeURIComponent(ziel)}`
+    }
     throw new Error('Nicht authentifiziert')
   }
   if (!res.ok) {

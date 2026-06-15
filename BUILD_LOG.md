@@ -273,3 +273,28 @@ Recherche (Open-Source, eIDAS): self-hosted Plattformen wie OpenSign/DocuSeal bi
 - In `Anfragen.tsx` unter dem Zeilenkopf eingebunden (immer sichtbar).
 
 > Hinweis: `tsc -b`/`eslint` für diese beiden Schritte auf Wunsch noch nicht ausgeführt.
+> Nachgeholt in `fa848a1` (zwei Befunde behoben).
+
+### Fix: Signatur-Link lief ins Leere (Redirect-Ziel durch den Login)
+
+Problem: Der intern kopierte Signatur-Link `…/portal/signatur/{token}` führte beim
+kalten Öffnen ins Leere. Ursache: die gesamte App liegt hinter `AuthGate`; ohne
+Token wurde hart auf `/login` umgeleitet, **ohne das Ziel zu merken** – nach dem
+Login landete man im Dashboard, nie zurück bei der Signatur. Entscheidung:
+Signatur bleibt **login-pflichtig** (nur eingeloggte Kunden), aber das Ziel wird
+durch den Login mitgeführt.
+
+- `frontend/src/App.tsx`: `AuthGate` hängt bei fehlendem Token das aktuelle Ziel
+  als `?redirect=<pfad>` an die Login-URL.
+- `frontend/src/pages/Login.tsx`: liest `redirect` aus den Query-Params und
+  navigiert nach erfolgreichem Login dorthin (nur interne Pfade zugelassen –
+  kein offener Redirect); sonst rollenbasierter Default.
+- `frontend/src/api/client.ts`: der 401-Handler führt das Ziel ebenfalls als
+  `?redirect=` mit (abgelaufener Token mitten in der Sitzung) und vermeidet eine
+  Login-Schleife, wenn man bereits auf `/login` ist.
+- `frontend/src/pages/customer/Signatur.tsx`: Fehlerzustand (statt endlosem
+  „Lade…“) wenn der Vorgang nicht abrufbar ist (ungültiger Link / fremder
+  Mandant), inkl. `retry: false`.
+
+**Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (im node:20-Container,
+da lokal kein Stack/Node lief). Live-Klicktest steht noch aus.

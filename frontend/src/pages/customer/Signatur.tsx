@@ -22,10 +22,11 @@ export default function Signatur() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const padRef = useRef<SignaturePad | null>(null)
 
-  const { data: vorgang, isLoading } = useQuery({
+  const { data: vorgang, isLoading, isError } = useQuery({
     queryKey: ['portal', 'signatur', token],
     queryFn: () => api.portal.signatur.get(token!),
     enabled: !!token,
+    retry: false,
   })
 
   const signieren = useMutation({
@@ -52,6 +53,21 @@ export default function Signatur() {
       padRef.current = null
     }
   }, [isInhouse, signierbar])
+
+  if (isError) {
+    return (
+      <div className="max-w-lg mx-auto mt-12 bg-slate-900 border border-slate-800 rounded-xl p-8 space-y-3 text-center">
+        <AlertTriangle className="text-amber-500 mx-auto" size={32} />
+        <p className="text-sm text-slate-300">
+          Dieser Signaturvorgang ist nicht verfügbar.
+        </p>
+        <p className="text-xs text-slate-500">
+          Der Link ist ungültig oder gehört zu einem anderen Konto. Bitte melden Sie sich mit dem
+          richtigen Zugang an oder fordern Sie einen neuen Link an.
+        </p>
+      </div>
+    )
+  }
 
   if (isLoading || !vorgang) return <p className="text-slate-500 text-sm">Lade…</p>
 
