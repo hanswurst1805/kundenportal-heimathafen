@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api, type AnfrageIntern } from '../../api/client'
 import StatusBadge from '../../components/StatusBadge'
+import AnfrageAblaufplan from '../../components/AnfrageAblaufplan'
 import { formatDateTime } from '../../lib/format'
 import { KUNDENSTATUS, KUNDENSTATUS_LABELS, INTERNE_ZWISCHENSCHRITTE, PRIORITAET_OPTIONS } from '../../lib/statuscodes'
 
@@ -36,6 +37,8 @@ function AnfrageRow({ anfrage }: { anfrage: AnfrageIntern }) {
         </div>
         <StatusBadge status={anfrage.status_kunde} />
       </div>
+
+      <AnfrageAblaufplan anfrage={anfrage} onAnfrageClick={() => setOpen(true)} />
 
       {open && (
         <div className="space-y-3 pt-3 border-t border-slate-800">

@@ -258,3 +258,18 @@ Recherche (Open-Source, eIDAS): self-hosted Plattformen wie OpenSign/DocuSeal bi
 ---
 
 **Stand:** Das Kundenportal bietet damit echte In-Portal-Signaturen (FES) inkl. interner Sichtbarkeit (Signatur-Link kopieren, signierten Beleg herunterladen) – wahlweise per `SIGNATURE_PROVIDER` aktivierbar (`stub` ↔ `inhouse`), ohne externen Dienst.
+
+---
+
+### Angebot-Editor (Entwürfe bearbeiten)
+
+- `src/schemas/angebot.py`: `AngebotUpdate` (Titel, Gültigkeit, Positionen – alle optional).
+- `src/api/internal/angebote.py`: `PATCH /intern/angebote/{id}` – bearbeitet nur Status `entwurf` (sonst 409, da ab `bereitgestellt` ein Signatur-Envelope existiert); Positionen werden ersetzt, `gesamtpreis` neu berechnet.
+- Frontend: `AngebotBearbeiten.tsx` (eigene Seite, Route `/intern/angebote/:id/bearbeiten`, Positions-Editor wie beim Anlegen, Guard für Nicht-Entwürfe), „Bearbeiten“-Button auf Entwurf-Zeilen in `Angebote.tsx`, `intern.angebote.update()` + `AngebotUpdate` im `client.ts`.
+
+### Anfrage-Ablaufplan (horizontaler Stepper)
+
+- `frontend/src/components/AnfrageAblaufplan.tsx`: horizontale Kachelreihe der verdichteten Workflow-Phasen (Anfrage → Angebot → Signatur → AVV → Beauftragt → Leistungsschein → Umfrage → Abgeschlossen). Erledigte Phasen sky-gefärbt mit Häkchen, aktuelle Phase mit Ring hervorgehoben, künftige gedämpft; Klick auf eine Kachel springt zur passenden internen Seite (Anfrage-Kachel klappt das Detail auf). Stufe abgeleitet aus `status_kunde` über das `KUNDENSTATUS`-Modell.
+- In `Anfragen.tsx` unter dem Zeilenkopf eingebunden (immer sichtbar).
+
+> Hinweis: `tsc -b`/`eslint` für diese beiden Schritte auf Wunsch noch nicht ausgeführt.
