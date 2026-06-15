@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
-import { api } from '../../api/client'
+import { api, type Angebot } from '../../api/client'
 import { Trash2, Plus } from 'lucide-react'
 
 interface PositionRow {
@@ -10,40 +10,26 @@ interface PositionRow {
   einzelpreis: string
 }
 
-export default function AngebotBearbeiten() {
-  const { id } = useParams<{ id: string }>()
+function EditorForm({ angebot }: { angebot: Angebot }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [error, setError] = useState('')
 
-  const { data: angebot, isLoading } = useQuery({
-    queryKey: ['intern', 'angebote', id],
-    queryFn: () => api.intern.angebote.get(id!),
-    enabled: !!id,
-  })
-
-  const [titel, setTitel] = useState('')
-  const [gueltigBis, setGueltigBis] = useState('')
-  const [positionen, setPositionen] = useState<PositionRow[]>([])
-
-  useEffect(() => {
-    if (!angebot) return
-    setTitel(angebot.titel)
-    setGueltigBis(angebot.gueltig_bis ?? '')
-    setPositionen(
-      angebot.positionen.length > 0
-        ? angebot.positionen.map(p => ({
-            bezeichnung: p.bezeichnung,
-            menge: String(p.menge),
-            einzelpreis: String(p.einzelpreis),
-          }))
-        : [{ bezeichnung: '', menge: '1', einzelpreis: '0' }],
-    )
-  }, [angebot])
+  const [titel, setTitel] = useState(angebot.titel)
+  const [gueltigBis, setGueltigBis] = useState(angebot.gueltig_bis ?? '')
+  const [positionen, setPositionen] = useState<PositionRow[]>(
+    angebot.positionen.length > 0
+      ? angebot.positionen.map(p => ({
+          bezeichnung: p.bezeichnung,
+          menge: String(p.menge),
+          einzelpreis: String(p.einzelpreis),
+        }))
+      : [{ bezeichnung: '', menge: '1', einzelpreis: '0' }],
+  )
 
   const save = useMutation({
     mutationFn: () =>
-      api.intern.angebote.update(id!, {
+      api.intern.angebote.update(angebot.id, {
         titel,
         gueltig_bis: gueltigBis || undefined,
         positionen: positionen
@@ -56,25 +42,6 @@ export default function AngebotBearbeiten() {
     },
     onError: (e: Error) => setError(e.message),
   })
-
-  if (isLoading || !angebot) return <p className="text-sm text-slate-500">Lade…</p>
-
-  if (angebot.status !== 'entwurf') {
-    return (
-      <div className="max-w-2xl space-y-4">
-        <h1 className="text-xl font-semibold text-white">Angebot bearbeiten</h1>
-        <p className="text-sm text-amber-400">
-          Nur Entwürfe können bearbeitet werden. Dieses Angebot ist bereits bereitgestellt.
-        </p>
-        <button
-          onClick={() => navigate('/intern/angebote')}
-          className="bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg"
-        >
-          Zurück
-        </button>
-      </div>
-    )
-  }
 
   function updatePosition(i: number, field: keyof PositionRow, value: string) {
     setPositionen(prev => prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)))
@@ -165,4 +132,36 @@ export default function AngebotBearbeiten() {
       </div>
     </div>
   )
+}
+
+export default function AngebotBearbeiten() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+
+  const { data: angebot, isLoading } = useQuery({
+    queryKey: ['intern', 'angebote', id],
+    queryFn: () => api.intern.angebote.get(id!),
+    enabled: !!id,
+  })
+
+  if (isLoading || !angebot) return <p className="text-sm text-slate-500">Lade…</p>
+
+  if (angebot.status !== 'entwurf') {
+    return (
+      <div className="max-w-2xl space-y-4">
+        <h1 className="text-xl font-semibold text-white">Angebot bearbeiten</h1>
+        <p className="text-sm text-amber-400">
+          Nur Entwürfe können bearbeitet werden. Dieses Angebot ist bereits bereitgestellt.
+        </p>
+        <button
+          onClick={() => navigate('/intern/angebote')}
+          className="bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg"
+        >
+          Zurück
+        </button>
+      </div>
+    )
+  }
+
+  return <EditorForm angebot={angebot} />
 }

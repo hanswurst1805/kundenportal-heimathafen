@@ -50,7 +50,7 @@ export default function AnfrageAblaufplan({
   onAnfrageClick?: () => void
 }) {
   const navigate = useNavigate()
-  const aktuellerIndex = KUNDENSTATUS.indexOf(anfrage.status_kunde)
+  const aktuellerIndex = (KUNDENSTATUS as readonly string[]).indexOf(anfrage.status_kunde)
   const storniert = anfrage.status_kunde === 'storniert'
 
   function handleClick(phase: Phase) {
