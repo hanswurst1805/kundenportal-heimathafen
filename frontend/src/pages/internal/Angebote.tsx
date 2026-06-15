@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { api, type Angebot } from '../../api/client'
 import { formatCurrency, formatDate } from '../../lib/format'
 import { ANGEBOT_STATUS_LABELS } from '../../lib/statuscodes'
 
 function AngebotRow({ angebot }: { angebot: Angebot }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [error, setError] = useState('')
 
   const bereitstellen = useMutation({
@@ -54,13 +56,21 @@ function AngebotRow({ angebot }: { angebot: Angebot }) {
       <div className="flex items-center justify-between pt-2 border-t border-slate-800">
         <span className="text-sm font-medium text-white">Gesamt: {formatCurrency(angebot.gesamtpreis)}</span>
         {angebot.status === 'entwurf' && (
-          <button
-            onClick={() => { setError(''); bereitstellen.mutate() }}
-            disabled={bereitstellen.isPending}
-            className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white text-sm font-medium px-4 py-2 rounded-lg"
-          >
-            Bereitstellen
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate(`/intern/angebote/${angebot.id}/bearbeiten`)}
+              className="bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg"
+            >
+              Bearbeiten
+            </button>
+            <button
+              onClick={() => { setError(''); bereitstellen.mutate() }}
+              disabled={bereitstellen.isPending}
+              className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white text-sm font-medium px-4 py-2 rounded-lg"
+            >
+              Bereitstellen
+            </button>
+          </div>
         )}
       </div>
 

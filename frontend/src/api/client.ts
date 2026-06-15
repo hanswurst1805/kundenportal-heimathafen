@@ -294,6 +294,12 @@ export interface AngebotCreate {
   positionen: { bezeichnung: string; menge: string; einzelpreis: string; sort_order?: number }[]
 }
 
+export interface AngebotUpdate {
+  titel?: string
+  gueltig_bis?: string
+  positionen?: { bezeichnung: string; menge: string; einzelpreis: string; sort_order?: number }[]
+}
+
 export interface LeistungsscheinIntern extends Leistungsschein {
   customer_id: string
   verantwortlicher_id: string | null
@@ -726,6 +732,9 @@ export const api = {
       },
       get(id: string): Promise<Angebot> {
         return req<Angebot>(`/intern/angebote/${id}`)
+      },
+      update(id: string, data: AngebotUpdate): Promise<Angebot> {
+        return req<Angebot>(`/intern/angebote/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
       },
       bereitstellen(id: string): Promise<Angebot> {
         return req<Angebot>(`/intern/angebote/${id}/bereitstellen`, { method: 'POST' })

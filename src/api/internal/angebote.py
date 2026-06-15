@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -10,9 +11,9 @@ from sqlalchemy.orm import selectinload
 from src.adapters.registry import get_signature_provider
 from src.core.auth import require_role
 from src.core.database import get_session
-from src.models.angebot import ANGEBOT_BEREITGESTELLT, ANGEBOT_ENTWURF, Angebot
+from src.models.angebot import ANGEBOT_BEREITGESTELLT, ANGEBOT_ENTWURF, Angebot, AngebotPosition
 from src.models.signatur import BEZUG_ANGEBOT
-from src.schemas.angebot import AngebotOut
+from src.schemas.angebot import AngebotOut, AngebotUpdate
 from src.services.origin import find_origin_for_angebot, set_origin_status
 
 router = APIRouter(prefix="/angebote", tags=["intern-angebote"], dependencies=[Depends(require_role("user", "admin"))])
@@ -35,6 +36,48 @@ async def get_angebot(angebot_id: uuid.UUID, session: AsyncSession = Depends(get
     if not angebot:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nicht gefunden")
     return angebot
+
+
+@router.patch("/{angebot_id}", response_model=AngebotOut)
+async def update_angebot(
+    angebot_id: uuid.UUID, data: AngebotUpdate, session: AsyncSession = Depends(get_session)
+):
+    result = await session.execute(
+        select(Angebot).where(Angebot.id == angebot_id).options(selectinload(Angebot.positionen))
+    )
+    angebot = result.scalar_one_or_none()
+    if not angebot:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nicht gefunden")
+    if angebot.status != ANGEBOT_ENTWURF:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Nur Entwürfe können bearbeitet werden")
+
+    if data.titel is not None:
+        angebot.titel = data.titel
+    if data.gueltig_bis is not None:
+        angebot.gueltig_bis = data.gueltig_bis
+
+    if data.positionen is not None:
+        angebot.positionen.clear()
+        gesamtpreis = Decimal("0")
+        for pos in data.positionen:
+            positionspreis = pos.menge * pos.einzelpreis
+            angebot.positionen.append(
+                AngebotPosition(
+                    bezeichnung=pos.bezeichnung,
+                    menge=pos.menge,
+                    einzelpreis=pos.einzelpreis,
+                    gesamtpreis=positionspreis,
+                    sort_order=pos.sort_order,
+                )
+            )
+            gesamtpreis += positionspreis
+        angebot.gesamtpreis = gesamtpreis
+
+    await session.flush()
+    result = await session.execute(
+        select(Angebot).where(Angebot.id == angebot.id).options(selectinload(Angebot.positionen))
+    )
+    return result.scalar_one()
 
 
 @router.post("/{angebot_id}/bereitstellen", response_model=AngebotOut)

@@ -19,6 +19,7 @@ import Signatur from './pages/customer/Signatur'
 import InternDashboard from './pages/internal/Dashboard'
 import InternAnfragen from './pages/internal/Anfragen'
 import AngebotErstellen from './pages/internal/AngebotErstellen'
+import AngebotBearbeiten from './pages/internal/AngebotBearbeiten'
 import InternAngebote from './pages/internal/Angebote'
 import InternBestellungen from './pages/internal/Bestellungen'
 import InternAuftraege from './pages/internal/Auftraege'
@@ -84,6 +85,7 @@ function InternalRoutes({ me }: { me: UserMe }) {
       <Route path="/intern/anfragen" element={<InternalLayout><InternAnfragen /></InternalLayout>} />
       <Route path="/intern/anfragen/:id/angebot" element={<InternalLayout><AngebotErstellen /></InternalLayout>} />
       <Route path="/intern/angebote" element={<InternalLayout><InternAngebote /></InternalLayout>} />
+      <Route path="/intern/angebote/:id/bearbeiten" element={<InternalLayout><AngebotBearbeiten /></InternalLayout>} />
       <Route
         path="/intern/bestellungen"
         element={<InternalLayout><InternBestellungen /></InternalLayout>}

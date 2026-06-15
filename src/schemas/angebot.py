@@ -31,6 +31,12 @@ class AngebotCreate(BaseModel):
     positionen: list[AngebotPositionIn] = []
 
 
+class AngebotUpdate(BaseModel):
+    titel: Optional[str] = None
+    gueltig_bis: Optional[date] = None
+    positionen: Optional[list[AngebotPositionIn]] = None
+
+
 class AngebotOut(BaseModel):
     id: uuid.UUID
     angebotsnummer: str
