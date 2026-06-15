@@ -16,6 +16,7 @@ import LeistungsscheinDetail from './pages/customer/LeistungsscheinDetail'
 import Dokumente from './pages/customer/Dokumente'
 import Umfragen from './pages/customer/Umfragen'
 import Signatur from './pages/customer/Signatur'
+import PortalSignaturen from './pages/customer/Signaturen'
 import InternDashboard from './pages/internal/Dashboard'
 import InternAnfragen from './pages/internal/Anfragen'
 import AngebotErstellen from './pages/internal/AngebotErstellen'
@@ -74,6 +75,7 @@ function CustomerRoutes() {
       />
       <Route path="/portal/dokumente" element={<CustomerLayout><Dokumente /></CustomerLayout>} />
       <Route path="/portal/umfragen" element={<CustomerLayout><Umfragen /></CustomerLayout>} />
+      <Route path="/portal/signaturen" element={<CustomerLayout><PortalSignaturen /></CustomerLayout>} />
       <Route path="/portal/signatur/:token" element={<CustomerLayout><Signatur /></CustomerLayout>} />
       <Route path="/einstellungen" element={<CustomerLayout><Settings /></CustomerLayout>} />
       <Route path="*" element={<Navigate to="/portal" replace />} />

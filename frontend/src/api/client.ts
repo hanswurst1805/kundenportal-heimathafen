@@ -166,6 +166,14 @@ export interface Signaturvorgang {
   erinnerung_gesendet_am: string | null
 }
 
+export interface OffeneSignatur {
+  id: string
+  bezugstyp: string
+  token: string | null
+  status: string
+  titel: string
+}
+
 export interface AVV {
   id: string
   customer_id: string
@@ -627,6 +635,9 @@ export const api = {
     },
 
     signatur: {
+      listOffen(): Promise<OffeneSignatur[]> {
+        return req<OffeneSignatur[]>('/portal/signatur')
+      },
       listByBezug(bezugstyp: string, bezugsId: string): Promise<Signaturvorgang[]> {
         return req<Signaturvorgang[]>(`/portal/signatur/by-bezug/${bezugstyp}/${bezugsId}`)
       },

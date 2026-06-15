@@ -21,6 +21,28 @@ from src.models.signatur import (
 )
 
 
+async def resolve_titel(session: AsyncSession, vorgang: Signaturvorgang) -> str:
+    """Menschlich lesbares Label fuer einen Signaturvorgang (fuer Listen)."""
+    if vorgang.bezugstyp == BEZUG_ANGEBOT:
+        angebot = await session.get(Angebot, vorgang.bezugs_id)
+        if not angebot:
+            return "Angebot"
+        return f"Angebot {angebot.angebotsnummer}" + (f" – {angebot.titel}" if angebot.titel else "")
+    if vorgang.bezugstyp == BEZUG_BESTELLUNG:
+        bestellung = await session.get(Bestellung, vorgang.bezugs_id)
+        return f"Bestellung {bestellung.bestell_nr}" if bestellung else "Bestellung"
+    if vorgang.bezugstyp == BEZUG_AVV:
+        return "Auftragsverarbeitungsvertrag"
+    if vorgang.bezugstyp == BEZUG_AUFTRAGSBESTAETIGUNG:
+        bestaetigung = await session.get(Auftragsbestaetigung, vorgang.bezugs_id)
+        if bestaetigung:
+            auftrag = await session.get(Auftrag, bestaetigung.auftrag_id)
+            if auftrag:
+                return f"Auftragsbestätigung {auftrag.auftragsnummer}"
+        return "Auftragsbestätigung"
+    return vorgang.bezugstyp
+
+
 async def resolve_customer_id(session: AsyncSession, vorgang: Signaturvorgang) -> Optional[uuid.UUID]:
     if vorgang.bezugstyp == BEZUG_ANGEBOT:
         angebot = await session.get(Angebot, vorgang.bezugs_id)

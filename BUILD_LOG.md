@@ -298,3 +298,27 @@ durch den Login mitgeführt.
 
 **Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (im node:20-Container,
 da lokal kein Stack/Node lief). Live-Klicktest steht noch aus.
+
+### Fix: Kunde hatte keinen In-Portal-Weg zum Signieren
+
+Befund (per Screenshot): Der eingeloggte Kunde sieht auf der Übersicht zwar
+Posten „Warten auf Signatur“ (Bestellungen/Anfrage), kommt aber nirgends zum
+Signier-Screen – Dashboard-Kacheln waren nicht klickbar, es gab keinen
+„Signatur“-Menüpunkt und keinen Endpunkt, der die offenen Vorgänge eines Kunden
+auflistet (nur `by-bezug` / `by-token`). Nur Angebote waren verlinkt.
+
+- `src/services/signatur_resolve.py`: `resolve_titel()` – menschlich lesbares
+  Label je Bezugstyp (Angebot/Bestellung/AVV/Auftragsbestätigung).
+- `src/schemas/signatur.py`: `OffeneSignaturOut` (id, bezugstyp, token, status, titel).
+- `src/api/customer/signatur.py`: `GET /portal/signatur` – alle offenen Vorgänge
+  (`erstellt`/`versendet`) des eingeloggten Kunden, mandantengefiltert über
+  `resolve_customer_id`, mit aufgelöstem Titel.
+- Frontend: `api.portal.signatur.listOffen()` + Typ `OffeneSignatur`; neue Seite
+  `customer/Signaturen.tsx` („Zu signieren“, Liste mit „Signieren“-Links); Route
+  `/portal/signaturen` + Menüpunkt „Zu signieren“ in `CustomerLayout` (Angebote
+  bekommt das `FileText`-Icon, Signatur das `FileSignature`-Icon); zusätzlich
+  prominente „Zu signieren“-Sektion oben auf dem `customer/Dashboard.tsx` mit
+  Direkt-Links.
+
+**Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (node:20-Container),
+Backend `py_compile` ok. Test-Suite/Live-Klicktest stehen aus (keine DB lokal).

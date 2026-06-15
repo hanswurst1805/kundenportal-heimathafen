@@ -13,13 +13,49 @@ from src.core.config import settings
 from src.core.database import get_session
 from src.models.customer import Customer
 from src.models.ereignis import AKTEUR_USER
-from src.models.signatur import SIGNATUR_SIGNIERT, SIGNATUR_VERSENDET, Signaturvorgang
+from src.models.signatur import (
+    SIGNATUR_ERSTELLT,
+    SIGNATUR_SIGNIERT,
+    SIGNATUR_VERSENDET,
+    Signaturvorgang,
+)
 from src.core.status_codes import EVENT_SIGNATURE_COMPLETED
-from src.schemas.signatur import SignaturInput, SignaturvorgangOut
-from src.services.signatur_resolve import resolve_customer_id
+from src.schemas.signatur import OffeneSignaturOut, SignaturInput, SignaturvorgangOut
+from src.services.signatur_resolve import resolve_customer_id, resolve_titel
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/signatur", tags=["portal-signatur"])
+
+
+@router.get("", response_model=list[OffeneSignaturOut])
+async def list_offene_signaturen(
+    session: AsyncSession = Depends(get_session),
+    ctx: AuthContext = Depends(require_customer),
+):
+    """Alle offenen Signaturvorgaenge des eingeloggten Kunden (zum Signieren)."""
+    vorgaenge = (
+        await session.execute(
+            select(Signaturvorgang)
+            .where(Signaturvorgang.status.in_([SIGNATUR_ERSTELLT, SIGNATUR_VERSENDET]))
+            .order_by(Signaturvorgang.created_at.desc())
+        )
+    ).scalars().all()
+
+    offen: list[OffeneSignaturOut] = []
+    for vorgang in vorgaenge:
+        customer_id = await resolve_customer_id(session, vorgang)
+        if customer_id != ctx.customer_id:
+            continue
+        offen.append(
+            OffeneSignaturOut(
+                id=vorgang.id,
+                bezugstyp=vorgang.bezugstyp,
+                token=vorgang.token,
+                status=vorgang.status,
+                titel=await resolve_titel(session, vorgang),
+            )
+        )
+    return offen
 
 
 @router.get("/by-bezug/{bezugstyp}/{bezugs_id}", response_model=list[SignaturvorgangOut])

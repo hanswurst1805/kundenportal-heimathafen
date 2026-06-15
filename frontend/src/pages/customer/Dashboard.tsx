@@ -1,17 +1,43 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { PenLine } from 'lucide-react'
 import { api } from '../../api/client'
 import StatusBadge from '../../components/StatusBadge'
 import { formatDate } from '../../lib/format'
 
 export default function Dashboard() {
   const { data, isLoading } = useQuery({ queryKey: ['portal', 'dashboard'], queryFn: api.portal.dashboard })
+  const { data: offeneSignaturen } = useQuery({
+    queryKey: ['portal', 'signaturen', 'offen'],
+    queryFn: api.portal.signatur.listOffen,
+  })
 
   if (isLoading || !data) return <p className="text-slate-500 text-sm">Lade…</p>
 
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-white">Übersicht</h1>
+
+      {offeneSignaturen && offeneSignaturen.length > 0 && (
+        <section className="bg-sky-950/40 border border-sky-800 rounded-xl p-6">
+          <h2 className="text-sm font-medium text-sky-200 mb-3">Zu signieren</h2>
+          <ul className="divide-y divide-sky-900/60">
+            {offeneSignaturen.map(v => (
+              <li key={v.id} className="py-2 flex items-center justify-between text-sm">
+                <span className="text-slate-100">{v.titel}</span>
+                {v.token && (
+                  <Link
+                    to={`/portal/signatur/${v.token}`}
+                    className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg"
+                  >
+                    <PenLine size={13} /> Signieren
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
         <h2 className="text-sm font-medium text-slate-300 mb-3">Offene Bestellungen</h2>

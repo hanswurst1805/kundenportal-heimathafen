@@ -28,3 +28,13 @@ class SignaturvorgangOut(BaseModel):
     erinnerung_gesendet_am: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
+
+class OffeneSignaturOut(BaseModel):
+    """Verdichtete Sicht fuer die Kunden-Liste 'Zu signieren'."""
+
+    id: uuid.UUID
+    bezugstyp: str
+    token: Optional[str] = None
+    status: str
+    titel: str
