@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { PenLine } from 'lucide-react'
 import { api } from '../../api/client'
 import StatusBadge from '../../components/StatusBadge'
+import AblaufGrafik from '../../components/AblaufGrafik'
 import { formatDate } from '../../lib/format'
 
 export default function Dashboard() {
@@ -62,12 +63,15 @@ export default function Dashboard() {
         ) : (
           <ul className="divide-y divide-slate-800">
             {data.offene_anfragen.map(a => (
-              <li key={a.id} className="py-2 flex items-center justify-between text-sm">
-                <div>
-                  <span className="text-slate-200">{a.anfrage_nr}</span>
-                  <span className="text-slate-500 ml-2">{a.thema}</span>
+              <li key={a.id} className="py-3 space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-slate-200">{a.anfrage_nr}</span>
+                    <span className="text-slate-500 ml-2">{a.thema}</span>
+                  </div>
+                  <StatusBadge status={a.status_kunde} />
                 </div>
-                <StatusBadge status={a.status_kunde} />
+                <AblaufGrafik statusKunde={a.status_kunde} />
               </li>
             ))}
           </ul>

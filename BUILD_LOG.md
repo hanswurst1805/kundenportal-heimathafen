@@ -367,6 +367,24 @@ Vorgang**.
   – unabhängig von späteren globalen Wechseln. Neu angelegte Vorgänge folgen der
   aktuellen globalen Einstellung (inhouse → echte Signatur-PDFs).
 
+### Kundenansicht: Ablaufgrafik (Schritt-Übersicht je Vorgang)
+
+Kundenseitig fehlte eine grafische Übersicht der Workflow-Schritte und wo ein
+Vorgang gerade steht (bisher nur ein Status-Badge).
+
+- `frontend/src/components/AblaufGrafik.tsx`: horizontale Schritt-Grafik mit
+  Icons (Anfrage → Angebot → Signatur → AVV → Beauftragt → Umsetzung →
+  Abschluss); erledigte Phasen mit Häkchen/sky gefüllt, aktuelle hervorgehoben
+  (Ring), künftige gedämpft; Verbindungslinien eingefärbt; darunter Klartext
+  „Aktueller Status: …“. Stufe aus `status_kunde` über das `KUNDENSTATUS`-Modell
+  abgeleitet; `storniert` gesondert.
+- `frontend/src/pages/customer/Anfragen.tsx`: Grafik unter jeder Anfrage in
+  „Meine Anfragen“.
+- `frontend/src/pages/customer/Dashboard.tsx`: Grafik je offener Anfrage in der
+  „Offene Anfragen“-Sektion der Übersicht.
+
+**Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (node:20-Container).
+
 ### Stub-Signatur-Provider entfernt – nur noch inhouse
 
 Der Klick-Signatur-Provider (`stub`) ist als Signatur-Anbieter komplett raus;

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/client'
 import StatusBadge from '../../components/StatusBadge'
+import AblaufGrafik from '../../components/AblaufGrafik'
 import { formatDateTime } from '../../lib/format'
 
 const PRIORITAETEN = ['niedrig', 'mittel', 'hoch']
@@ -111,13 +112,16 @@ export default function Anfragen() {
         ) : (
           <ul className="divide-y divide-slate-800">
             {anfragen.map(a => (
-              <li key={a.id} className="py-3 flex items-start justify-between gap-4 text-sm">
-                <div>
-                  <p className="text-slate-200 font-medium">{a.anfrage_nr} – {a.thema}</p>
-                  {a.beschreibung && <p className="text-slate-500 mt-0.5">{a.beschreibung}</p>}
-                  <p className="text-xs text-slate-600 mt-1">{formatDateTime(a.created_at)}</p>
+              <li key={a.id} className="py-4 space-y-3 text-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-slate-200 font-medium">{a.anfrage_nr} – {a.thema}</p>
+                    {a.beschreibung && <p className="text-slate-500 mt-0.5">{a.beschreibung}</p>}
+                    <p className="text-xs text-slate-600 mt-1">{formatDateTime(a.created_at)}</p>
+                  </div>
+                  <StatusBadge status={a.status_kunde} />
                 </div>
-                <StatusBadge status={a.status_kunde} />
+                <AblaufGrafik statusKunde={a.status_kunde} />
               </li>
             ))}
           </ul>
