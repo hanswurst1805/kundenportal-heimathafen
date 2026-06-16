@@ -346,3 +346,9 @@ unsigniertes Vorschau-PDF on-the-fly erzeugt und auf der Signaturseite eingebett
 **Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (node:20-Container),
 Backend `py_compile` ok. PDF-Erzeugung/Test-Suite/Live-Klicktest stehen aus
 (keine DB/kein reportlab lokal) – Prüfung auf dem VPS.
+
+### Build-Hygiene: pip-Root-Warnung beim API-Image unterdrückt
+
+`Dockerfile`: `pip install` mit `--root-user-action=ignore --disable-pip-version-check`
+– entfernt die „Running pip as the 'root' user“-Warnung und den Versionshinweis
+beim `kundenportal.sh update`/`build` (rein kosmetisch, Build war zuvor erfolgreich).

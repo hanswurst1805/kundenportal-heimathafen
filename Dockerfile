@@ -12,7 +12,7 @@ COPY migrations ./migrations
 COPY alembic.ini ./
 COPY scripts ./scripts
 
-RUN pip install --no-cache-dir . \
+RUN pip install --no-cache-dir --root-user-action=ignore --disable-pip-version-check . \
     && chmod +x scripts/entrypoint.sh
 
 EXPOSE 8000
