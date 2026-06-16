@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.adapters.registry import get_signature_provider
+from src.adapters.registry import get_signature_provider_by_name
 from src.automation.events import publish
 from src.core.auth import AuthContext, require_customer
 from src.core.config import settings
@@ -155,8 +155,11 @@ async def signieren(
 
     payload = payload or SignaturInput()
 
-    # Beim inhouse-Provider ist eine handschriftliche Unterschrift erforderlich.
-    if settings.signature_provider == "inhouse" and not payload.signatur_bild:
+    # Entscheidung pro Vorgang (nicht global): ein als inhouse angelegter Vorgang
+    # verlangt eine handschriftliche Unterschrift – ein stub-Vorgang bleibt
+    # Klick-Signatur, auch wenn die globale Einstellung inzwischen wechselte.
+    anbieter = vorgang.anbieter or settings.signature_provider
+    if anbieter == "inhouse" and not payload.signatur_bild:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unterschrift fehlt")
 
     # Unterzeichnername bestimmen: Eingabe -> Kundenkontakt -> Benutzername.
@@ -166,7 +169,7 @@ async def signieren(
         unterzeichner_name = customer.contact_name or customer.name if customer else None
     unterzeichner_name = unterzeichner_name or ctx.username
 
-    await get_signature_provider().apply_signature(
+    await get_signature_provider_by_name(anbieter).apply_signature(
         session,
         vorgang,
         unterzeichner_name=unterzeichner_name,

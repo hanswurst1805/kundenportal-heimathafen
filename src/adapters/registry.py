@@ -17,12 +17,18 @@ from src.core.config import settings
 
 
 @lru_cache
-def get_signature_provider() -> SignatureProvider:
-    if settings.signature_provider == "stub":
+def get_signature_provider_by_name(name: str) -> SignatureProvider:
+    """Provider anhand seines Namens (z. B. ``vorgang.anbieter``) – damit ein
+    Vorgang konsistent bleibt, auch wenn die globale Einstellung wechselt."""
+    if name == "stub":
         return StubSignatureProvider()
-    if settings.signature_provider == "inhouse":
+    if name == "inhouse":
         return InhouseSignatureProvider()
-    raise ValueError(f"Unbekannter signature_provider: {settings.signature_provider}")
+    raise ValueError(f"Unbekannter signature-Anbieter: {name}")
+
+
+def get_signature_provider() -> SignatureProvider:
+    return get_signature_provider_by_name(settings.signature_provider)
 
 
 @lru_cache

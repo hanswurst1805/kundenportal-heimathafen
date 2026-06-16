@@ -347,6 +347,26 @@ unsigniertes Vorschau-PDF on-the-fly erzeugt und auf der Signaturseite eingebett
 Backend `py_compile` ok. PDF-Erzeugung/Test-Suite/Live-Klicktest stehen aus
 (keine DB/kein reportlab lokal) – Prüfung auf dem VPS.
 
+### Fix: Signier-Entscheidung pro Vorgang (Provider-Wechsel-Inkonsistenz)
+
+Symptom: Nach Umstellung `SIGNATURE_PROVIDER` stub→inhouse zeigte ein **alt unter
+stub angelegter** Vorgang im Frontend die Klick-Variante (kein Zeichenfeld,
+„Jetzt signieren“), das Backend verlangte aber – weil es die **globale**
+Einstellung prüfte – eine Unterschrift → 422 „Unterschrift fehlt“ (Sackgasse).
+
+Ursache: Frontend entscheidet per `vorgang.anbieter`, Backend per
+`settings.signature_provider`. Fix: Backend entscheidet jetzt ebenfalls **pro
+Vorgang**.
+
+- `src/adapters/registry.py`: `get_signature_provider_by_name(name)`;
+  `get_signature_provider()` delegiert an die globale Einstellung.
+- `src/api/customer/signatur.py`: `signieren` nutzt `vorgang.anbieter`
+  (Fallback globale Einstellung) für die Unterschriftspflicht **und** die
+  Provider-Auswahl bei `apply_signature`. Damit bleibt ein stub-Vorgang
+  Klick-Signatur, ein inhouse-Vorgang verlangt die Unterschrift + erzeugt das PDF
+  – unabhängig von späteren globalen Wechseln. Neu angelegte Vorgänge folgen der
+  aktuellen globalen Einstellung (inhouse → echte Signatur-PDFs).
+
 ### Build-Hygiene: pip-Root-Warnung beim API-Image unterdrückt
 
 `Dockerfile`: `pip install` mit `--root-user-action=ignore --disable-pip-version-check`
