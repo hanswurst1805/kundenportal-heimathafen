@@ -188,7 +188,16 @@ async def test_workflow_und_mandantentrennung(client, world, user_token):
     r = await client.get("/api/v1/intern/signaturen", headers=ut)
     assert r.status_code == 200
     vorgang = next(v for v in r.json() if v["bezugs_id"] == bestellung["id"])
-    r = await client.post(f"/api/v1/portal/signatur/{vorgang['token']}/signieren", headers=ka)
+    # inhouse-Signatur: handschriftliche Unterschrift (1x1-PNG) ist Pflicht.
+    signatur_bild = (
+        "data:image/png;base64,"
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+    )
+    r = await client.post(
+        f"/api/v1/portal/signatur/{vorgang['token']}/signieren",
+        headers=ka,
+        json={"signatur_bild": signatur_bild, "unterzeichner_name": "Test Kunde"},
+    )
     assert r.status_code == 200
 
     # -> avv_required: AVV ausstehend

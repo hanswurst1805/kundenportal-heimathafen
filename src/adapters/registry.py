@@ -1,4 +1,5 @@
-"""Factory-Registry fuer austauschbare Adapter (Default: 'stub')."""
+"""Factory-Registry fuer austauschbare Adapter. Signatur: nur 'inhouse';
+avv/target_system/notification: 'stub'."""
 
 from __future__ import annotations
 
@@ -10,25 +11,16 @@ from src.adapters.notification.base import NotificationProvider
 from src.adapters.notification.stub import StubNotificationProvider
 from src.adapters.signature.base import SignatureProvider
 from src.adapters.signature.inhouse import InhouseSignatureProvider
-from src.adapters.signature.stub import StubSignatureProvider
 from src.adapters.target_system.base import TargetSystemAdapter
 from src.adapters.target_system.stub import StubTargetSystemAdapter
 from src.core.config import settings
 
 
 @lru_cache
-def get_signature_provider_by_name(name: str) -> SignatureProvider:
-    """Provider anhand seines Namens (z. B. ``vorgang.anbieter``) – damit ein
-    Vorgang konsistent bleibt, auch wenn die globale Einstellung wechselt."""
-    if name == "stub":
-        return StubSignatureProvider()
-    if name == "inhouse":
-        return InhouseSignatureProvider()
-    raise ValueError(f"Unbekannter signature-Anbieter: {name}")
-
-
 def get_signature_provider() -> SignatureProvider:
-    return get_signature_provider_by_name(settings.signature_provider)
+    if settings.signature_provider == "inhouse":
+        return InhouseSignatureProvider()
+    raise ValueError(f"Unbekannter signature_provider: {settings.signature_provider}")
 
 
 @lru_cache

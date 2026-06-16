@@ -61,7 +61,7 @@ src/
     auth.py          /auth/* (Login, 2FA-Setup/Verify, Passwort)
     customer/        /api/v1/portal/*  (require_customer, mandantengefiltert)
     internal/        /api/v1/intern/*  (require_role("user","admin"); admin-only: statusregeln, users, avv-vorlagen)
-  adapters/          signature|avv|target_system|notification + registry (Provider via settings, Default "stub")
+  adapters/          signature|avv|target_system|notification + registry (signature: nur "inhouse"; übrige: "stub")
   automation/        events (In-Process Event-Bus), rules (StatusRegel), handlers (9 Trigger), dedup
   services/          numbering, origin, auftrag_service, signatur_resolve, pdf_signing
 frontend/src/        api/client.ts, components/, pages/{customer,internal}, lib/
@@ -83,9 +83,9 @@ tests/               conftest.py, test_integration.py, test_signatur_inhouse.py
   Übergänge laufen über den Event-Bus (`automation/`); `StatusRegel` (per Migration
   0002 geseedet) steuert Zielstatus + Benachrichtigung.
 - **Adapter** (austauschbar via `settings.*_provider`):
-  - `signature`: `stub` (Klick-Signatur) | `inhouse` (Unterschrift zeichnen → PDF
-    mit Audit-Trail, kryptografisch versiegelt = FES; Siegel-Zertifikat
-    selbstsigniert auto-erzeugt unter `data/signing/`)
+  - `signature`: nur `inhouse` (Unterschrift zeichnen → PDF mit Audit-Trail,
+    kryptografisch versiegelt = FES; Siegel-Zertifikat selbstsigniert auto-erzeugt
+    unter `data/signing/`). Der frühere `stub`-Klick-Signatur-Provider wurde entfernt.
   - `avv`, `target_system`, `notification`: jeweils `stub`
 
 ## Konventionen

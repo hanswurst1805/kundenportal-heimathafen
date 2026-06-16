@@ -367,6 +367,33 @@ Vorgang**.
   – unabhängig von späteren globalen Wechseln. Neu angelegte Vorgänge folgen der
   aktuellen globalen Einstellung (inhouse → echte Signatur-PDFs).
 
+### Stub-Signatur-Provider entfernt – nur noch inhouse
+
+Der Klick-Signatur-Provider (`stub`) ist als Signatur-Anbieter komplett raus;
+`inhouse` ist der einzige Weg (Unterschrift zeichnen → versiegeltes PDF).
+avv/target_system/notification behalten ihre Stubs.
+
+- `src/adapters/signature/stub.py` gelöscht; `registry.py` ohne
+  `StubSignatureProvider`, `get_signature_provider()` liefert nur noch inhouse
+  (das zuvor ergänzte `get_signature_provider_by_name` wieder entfernt).
+- `src/core/config.py`: `signature_provider` Default `stub` → `inhouse`.
+- `src/models/signatur.py`: `anbieter`-Default `stub` → `inhouse` (nur neue Zeilen;
+  keine Migration nötig).
+- `src/api/customer/signatur.py`: `signieren` verlangt nun immer eine
+  Unterschrift und nutzt `get_signature_provider()`; `settings`-Import entfernt.
+- `.env.example`, `deploy/kundenportal.env.example`: `SIGNATURE_PROVIDER=inhouse`.
+- `CLAUDE.md`: Adapter-Beschreibung aktualisiert.
+- `frontend/src/pages/customer/Signatur.tsx`: `isInhouse`-Verzweigung entfernt –
+  immer Unterschriftsfeld + „Rechtsverbindlich signieren“ (toter „Jetzt
+  signieren“-Pfad weg). Dadurch sind auch bestehende stub-Vorgänge jetzt mit
+  echter Unterschrift signierbar und erzeugen ein PDF.
+- `tests/test_integration.py`: signiert jetzt mit handschriftlicher Unterschrift
+  (1×1-PNG) statt per Klick.
+
+**Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (node:20-Container),
+Backend `py_compile` ok, keine Stub-Signatur-Referenzen mehr. Test-Suite gegen
+laufende DB steht aus (lokal keine DB).
+
 ### Build-Hygiene: pip-Root-Warnung beim API-Image unterdrückt
 
 `Dockerfile`: `pip install` mit `--root-user-action=ignore --disable-pip-version-check`

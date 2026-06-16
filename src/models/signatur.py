@@ -35,7 +35,7 @@ class Signaturvorgang(Base, UUIDPKMixin):
 
     bezugstyp: Mapped[str] = mapped_column(String(32), index=True)
     bezugs_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
-    anbieter: Mapped[str] = mapped_column(String(32), default="stub")
+    anbieter: Mapped[str] = mapped_column(String(32), default="inhouse")
     anbieter_referenz: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     token: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True, index=True)
     signatur_link: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)

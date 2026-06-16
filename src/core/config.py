@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     jwt_expire_hours: int = 8
     initial_admin_password: str = "changeme"  # Wird beim ersten Start gesetzt
 
-    # Adapter-Provider (stub | inhouse)
-    signature_provider: str = "stub"
+    # Adapter-Provider
+    signature_provider: str = "inhouse"  # einziger Signatur-Provider
     avv_provider: str = "stub"
     target_system_provider: str = "stub"
     notification_provider: str = "stub"

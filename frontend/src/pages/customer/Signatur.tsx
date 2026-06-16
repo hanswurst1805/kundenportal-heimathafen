@@ -36,7 +36,6 @@ export default function Signatur() {
     onError: (e: Error) => setError(e.message),
   })
 
-  const isInhouse = vorgang?.anbieter === 'inhouse'
   const signierbar = vorgang?.status === 'versendet' || vorgang?.status === 'erstellt'
 
   const { data: vorschauUrl } = useQuery({
@@ -54,7 +53,7 @@ export default function Signatur() {
   }, [vorschauUrl])
 
   useEffect(() => {
-    if (!isInhouse || !signierbar || !canvasRef.current) return
+    if (!signierbar || !canvasRef.current) return
     const canvas = canvasRef.current
     const ratio = Math.max(window.devicePixelRatio || 1, 1)
     canvas.width = canvas.offsetWidth * ratio
@@ -66,7 +65,7 @@ export default function Signatur() {
       pad.off()
       padRef.current = null
     }
-  }, [isInhouse, signierbar])
+  }, [signierbar])
 
   if (isError) {
     return (
@@ -89,22 +88,18 @@ export default function Signatur() {
 
   function submit() {
     setError('')
-    if (isInhouse) {
-      if (!padRef.current || padRef.current.isEmpty()) {
-        setError('Bitte unterschreiben Sie im Feld.')
-        return
-      }
-      if (!name.trim()) {
-        setError('Bitte geben Sie Ihren Namen ein.')
-        return
-      }
-      signieren.mutate({
-        signatur_bild: padRef.current.toDataURL('image/png'),
-        unterzeichner_name: name.trim(),
-      })
-    } else {
-      signieren.mutate(undefined)
+    if (!padRef.current || padRef.current.isEmpty()) {
+      setError('Bitte unterschreiben Sie im Feld.')
+      return
     }
+    if (!name.trim()) {
+      setError('Bitte geben Sie Ihren Namen ein.')
+      return
+    }
+    signieren.mutate({
+      signatur_bild: padRef.current.toDataURL('image/png'),
+      unterzeichner_name: name.trim(),
+    })
   }
 
   return (
@@ -125,11 +120,9 @@ export default function Signatur() {
           <CheckCircle2 className="text-emerald-500 mx-auto" size={32} />
           <p className="text-sm text-slate-300">Dokument wurde erfolgreich signiert.</p>
           {vorgang.signierzeit && <p className="text-xs text-slate-500">am {formatDateTime(vorgang.signierzeit)}</p>}
-          {isInhouse && (
-            <p className="text-xs text-slate-500">
-              Das signierte, versiegelte PDF finden Sie unter „Dokumente“.
-            </p>
-          )}
+          <p className="text-xs text-slate-500">
+            Das signierte, versiegelte PDF finden Sie unter „Dokumente“.
+          </p>
         </div>
       )}
 
@@ -168,35 +161,33 @@ export default function Signatur() {
             Bitte prüfen Sie das Dokument und bestätigen Sie die Signatur, um den Vorgang abzuschließen.
           </p>
 
-          {isInhouse && (
-            <div className="space-y-3 text-left">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Name (Unterzeichner)</label>
-                <input
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Vor- und Nachname"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs text-slate-400">Unterschrift</label>
-                  <button
-                    type="button"
-                    onClick={() => padRef.current?.clear()}
-                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200"
-                  >
-                    <Eraser size={12} /> löschen
-                  </button>
-                </div>
-                <canvas
-                  ref={canvasRef}
-                  className="w-full h-40 rounded-lg bg-white touch-none cursor-crosshair"
-                />
-              </div>
+          <div className="space-y-3 text-left">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1.5">Name (Unterzeichner)</label>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Vor- und Nachname"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              />
             </div>
-          )}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs text-slate-400">Unterschrift</label>
+                <button
+                  type="button"
+                  onClick={() => padRef.current?.clear()}
+                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200"
+                >
+                  <Eraser size={12} /> löschen
+                </button>
+              </div>
+              <canvas
+                ref={canvasRef}
+                className="w-full h-40 rounded-lg bg-white touch-none cursor-crosshair"
+              />
+            </div>
+          </div>
 
           {error && (
             <p className="text-sm text-red-400 bg-red-950 border border-red-800 rounded-lg px-3 py-2">{error}</p>
@@ -206,7 +197,7 @@ export default function Signatur() {
             disabled={signieren.isPending}
             className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white text-sm font-medium px-4 py-2.5 rounded-lg"
           >
-            {isInhouse ? 'Rechtsverbindlich signieren' : 'Jetzt signieren'}
+            Rechtsverbindlich signieren
           </button>
         </div>
       )}
