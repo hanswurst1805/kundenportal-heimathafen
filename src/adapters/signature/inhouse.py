@@ -17,19 +17,14 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.customer import Customer
 from src.models.dokument import DOK_SIGNATUR_DOKUMENT, SICHTBAR_KUNDE, Dokument
 from src.models.signatur import (
-    BEZUG_ANGEBOT,
-    BEZUG_AUFTRAGSBESTAETIGUNG,
-    BEZUG_AVV,
-    BEZUG_BESTELLUNG,
     SIGNATUR_ABGELEHNT,
     SIGNATUR_VERSENDET,
     Signaturvorgang,
 )
-from src.services.pdf_signing import DokumentInhalt, SignaturAudit, erzeuge_signiertes_pdf
-from src.services.signatur_resolve import resolve_customer_id
+from src.services.pdf_signing import SignaturAudit, erzeuge_signiertes_pdf
+from src.services.signatur_resolve import build_dokument_inhalt, resolve_customer_id
 
 
 def _decode_image(data_url: Optional[str]) -> Optional[bytes]:
@@ -84,7 +79,7 @@ class InhouseSignatureProvider:
         if customer_id is None:
             return None
 
-        inhalt = await self._build_inhalt(session, vorgang, customer_id)
+        inhalt = await build_dokument_inhalt(session, vorgang, customer_id)
         audit = SignaturAudit(
             unterzeichner_name=unterzeichner_name,
             signiert_am=datetime.now(timezone.utc),
@@ -115,62 +110,3 @@ class InhouseSignatureProvider:
         session.add(dokument)
         await session.flush()
         return dokument
-
-    async def _build_inhalt(
-        self, session: AsyncSession, vorgang: Signaturvorgang, customer_id: uuid.UUID
-    ) -> DokumentInhalt:
-        customer = await session.get(Customer, customer_id)
-        kunde = customer.name if customer else str(customer_id)
-
-        titel = vorgang.bezugstyp.capitalize()
-        referenz = str(vorgang.bezugs_id)[:8]
-        zeilen: list[tuple[str, str]] = []
-
-        if vorgang.bezugstyp == BEZUG_ANGEBOT:
-            from src.models.angebot import Angebot
-
-            angebot = await session.get(Angebot, vorgang.bezugs_id)
-            if angebot:
-                titel = f"Angebot {angebot.angebotsnummer}"
-                referenz = angebot.angebotsnummer
-                zeilen = [
-                    ("Titel", angebot.titel),
-                    ("Gesamtpreis", f"{angebot.gesamtpreis} EUR"),
-                ]
-        elif vorgang.bezugstyp == BEZUG_BESTELLUNG:
-            from src.models.bestellung import Bestellung
-            from src.models.leistung import Leistung
-
-            bestellung = await session.get(Bestellung, vorgang.bezugs_id)
-            if bestellung:
-                titel = f"Bestellung {bestellung.bestell_nr}"
-                referenz = bestellung.bestell_nr
-                leistung = (
-                    await session.get(Leistung, bestellung.leistung_id)
-                    if bestellung.leistung_id
-                    else None
-                )
-                zeilen = [("Leistung", leistung.name if leistung else "—")]
-        elif vorgang.bezugstyp == BEZUG_AVV:
-            from src.models.avv import AVV
-
-            avv = await session.get(AVV, vorgang.bezugs_id)
-            if avv:
-                titel = "Auftragsverarbeitungsvertrag (AVV)"
-                referenz = str(avv.id)[:8]
-                zeilen = [
-                    ("Version", avv.version or "—"),
-                    ("Status", avv.status),
-                ]
-        elif vorgang.bezugstyp == BEZUG_AUFTRAGSBESTAETIGUNG:
-            from src.models.auftrag import Auftrag, Auftragsbestaetigung
-
-            bestaetigung = await session.get(Auftragsbestaetigung, vorgang.bezugs_id)
-            auftrag = (
-                await session.get(Auftrag, bestaetigung.auftrag_id) if bestaetigung else None
-            )
-            if auftrag:
-                titel = f"Auftragsbestätigung {auftrag.auftragsnummer}"
-                referenz = auftrag.auftragsnummer
-
-        return DokumentInhalt(titel=titel, referenz=referenz, kunde=kunde, zeilen=zeilen)

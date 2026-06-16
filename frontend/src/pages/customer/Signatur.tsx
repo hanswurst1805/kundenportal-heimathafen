@@ -39,6 +39,20 @@ export default function Signatur() {
   const isInhouse = vorgang?.anbieter === 'inhouse'
   const signierbar = vorgang?.status === 'versendet' || vorgang?.status === 'erstellt'
 
+  const { data: vorschauUrl } = useQuery({
+    queryKey: ['portal', 'signatur', token, 'vorschau'],
+    queryFn: () => api.portal.signatur.vorschauUrl(token!),
+    enabled: !!token && signierbar,
+    staleTime: Infinity,
+  })
+
+  // Object-URL freigeben, wenn die Vorschau wechselt / die Seite verlassen wird.
+  useEffect(() => {
+    return () => {
+      if (vorschauUrl) URL.revokeObjectURL(vorschauUrl)
+    }
+  }, [vorschauUrl])
+
   useEffect(() => {
     if (!isInhouse || !signierbar || !canvasRef.current) return
     const canvas = canvasRef.current
@@ -94,7 +108,7 @@ export default function Signatur() {
   }
 
   return (
-    <div className="max-w-lg mx-auto mt-12 bg-slate-900 border border-slate-800 rounded-xl p-8 space-y-6 text-center">
+    <div className="max-w-2xl mx-auto mt-12 bg-slate-900 border border-slate-800 rounded-xl p-8 space-y-6 text-center">
       <div className="flex justify-center">
         <div className="w-12 h-12 rounded-full bg-sky-600/10 flex items-center justify-center">
           <FileSignature className="text-sky-500" size={24} />
@@ -137,6 +151,19 @@ export default function Signatur() {
 
       {signierbar && (
         <div className="space-y-4">
+          {vorschauUrl ? (
+            <object data={vorschauUrl} type="application/pdf" className="w-full h-96 rounded-lg border border-slate-700 bg-white">
+              <p className="text-xs text-slate-400 p-3">
+                Vorschau kann nicht angezeigt werden.{' '}
+                <a href={vorschauUrl} target="_blank" rel="noreferrer" className="text-sky-400 underline">
+                  Dokument öffnen
+                </a>
+              </p>
+            </object>
+          ) : (
+            <p className="text-xs text-slate-500">Dokumentvorschau wird geladen…</p>
+          )}
+
           <p className="text-sm text-slate-300">
             Bitte prüfen Sie das Dokument und bestätigen Sie die Signatur, um den Vorgang abzuschließen.
           </p>

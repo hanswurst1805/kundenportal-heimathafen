@@ -644,6 +644,13 @@ export const api = {
       get(token: string): Promise<Signaturvorgang> {
         return req<Signaturvorgang>(`/portal/signatur/${token}`)
       },
+      async vorschauUrl(token: string): Promise<string> {
+        const res = await fetch(`${BASE}/portal/signatur/${token}/vorschau`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        })
+        if (!res.ok) throw new Error('Vorschau konnte nicht geladen werden')
+        return URL.createObjectURL(await res.blob())
+      },
       signieren(
         token: string,
         payload?: { signatur_bild?: string; unterzeichner_name?: string },

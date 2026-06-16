@@ -132,20 +132,9 @@ class DokumentInhalt:
     zeilen: list[tuple[str, str]] = field(default_factory=list)  # (Label, Wert)
 
 
-def build_signature_pdf(
-    inhalt: DokumentInhalt, audit: SignaturAudit, signatur_png: bytes | None
-) -> bytes:
-    """Baut ein einseitiges PDF: Kopf, Dokumentdaten, Unterschriftblock."""
-    from reportlab.lib.pagesizes import A4
+def _zeichne_kopf(c, inhalt: DokumentInhalt, width: float, left: float, y: float) -> float:
+    """Zeichnet Titel, Referenz/Kunde und die Datenzeilen; gibt die neue y-Position."""
     from reportlab.lib.units import mm
-    from reportlab.lib.utils import ImageReader
-    from reportlab.pdfgen import canvas
-
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    left = 25 * mm
-    y = height - 30 * mm
 
     c.setFont("Helvetica-Bold", 16)
     c.drawString(left, y, inhalt.titel)
@@ -165,6 +154,51 @@ def build_signature_pdf(
         c.setFont("Helvetica", 11)
         c.drawString(left + 55 * mm, y, str(wert))
         y -= 7 * mm
+    return y
+
+
+def build_vorschau_pdf(inhalt: DokumentInhalt) -> bytes:
+    """Unsigniertes Vorschau-PDF (gleicher Inhalt wie spaeter signiert, aber mit
+    Hinweis statt Unterschriftblock) – fuer die Anzeige vor dem Signieren."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    left = 25 * mm
+    y = height - 30 * mm
+
+    y = _zeichne_kopf(c, inhalt, width, left, y)
+
+    y -= 10 * mm
+    c.setFillColorRGB(0.85, 0.45, 0.0)
+    c.setFont("Helvetica-Oblique", 10)
+    c.drawString(left, y, "Vorschau – noch nicht signiert. Bitte prüfen und unten bestätigen.")
+    c.setFillGray(0)
+
+    c.showPage()
+    c.save()
+    return buffer.getvalue()
+
+
+def build_signature_pdf(
+    inhalt: DokumentInhalt, audit: SignaturAudit, signatur_png: bytes | None
+) -> bytes:
+    """Baut ein einseitiges PDF: Kopf, Dokumentdaten, Unterschriftblock."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfgen import canvas
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    left = 25 * mm
+    y = height - 30 * mm
+
+    _zeichne_kopf(c, inhalt, width, left, y)
 
     # Unterschriftblock unten
     block_y = 70 * mm

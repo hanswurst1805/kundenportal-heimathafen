@@ -322,3 +322,27 @@ auflistet (nur `by-bezug` / `by-token`). Nur Angebote waren verlinkt.
 
 **Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (node:20-Container),
 Backend `py_compile` ok. Test-Suite/Live-Klicktest stehen aus (keine DB lokal).
+
+### Signaturseite: Dokumentvorschau (echtes PDF) vor dem Signieren
+
+Der Kunde soll sehen, *was* er signiert, und dann bewusst bestätigen. Es wird ein
+unsigniertes Vorschau-PDF on-the-fly erzeugt und auf der Signaturseite eingebettet.
+
+- `src/services/signatur_resolve.py`: `build_dokument_inhalt()` – baut die
+  Dokumentdaten zum Vorgang (Angebot inkl. Positions-/Gesamtzeilen, Bestellung,
+  AVV, Auftragsbestätigung). Gemeinsam genutzt von Vorschau und signiertem PDF.
+- `src/adapters/signature/inhouse.py`: nutzt jetzt `build_dokument_inhalt`
+  (frühere private `_build_inhalt`-Methode entfernt → keine Divergenz mehr; das
+  signierte PDF zeigt damit ebenfalls die Angebotspositionen).
+- `src/services/pdf_signing.py`: gemeinsamer Kopf-Renderer `_zeichne_kopf` +
+  `build_vorschau_pdf()` (gleicher Inhalt, Hinweis „Vorschau – noch nicht
+  signiert“ statt Unterschriftblock).
+- `src/api/customer/signatur.py`: `GET /portal/signatur/{token}/vorschau` liefert
+  das Vorschau-PDF (login-/mandantengeprüft), provider-unabhängig.
+- Frontend: `api.portal.signatur.vorschauUrl()` (Blob + Auth-Header → Object-URL);
+  `customer/Signatur.tsx` bettet das PDF per `<object>` ein (Fallback-Link),
+  Karte auf `max-w-2xl` verbreitert, Object-URL wird beim Verlassen freigegeben.
+
+**Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (node:20-Container),
+Backend `py_compile` ok. PDF-Erzeugung/Test-Suite/Live-Klicktest stehen aus
+(keine DB/kein reportlab lokal) – Prüfung auf dem VPS.

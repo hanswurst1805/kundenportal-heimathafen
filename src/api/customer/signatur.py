@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+import asyncio
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +23,12 @@ from src.models.signatur import (
 )
 from src.core.status_codes import EVENT_SIGNATURE_COMPLETED
 from src.schemas.signatur import OffeneSignaturOut, SignaturInput, SignaturvorgangOut
-from src.services.signatur_resolve import resolve_customer_id, resolve_titel
+from src.services.pdf_signing import build_vorschau_pdf
+from src.services.signatur_resolve import (
+    build_dokument_inhalt,
+    resolve_customer_id,
+    resolve_titel,
+)
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/signatur", tags=["portal-signatur"])
@@ -94,6 +101,29 @@ async def get_signaturvorgang(
     if customer_id:
         ctx.require_customer_scope(customer_id)
     return vorgang
+
+
+@router.get("/{token}/vorschau")
+async def vorschau(
+    token: str,
+    session: AsyncSession = Depends(get_session),
+    ctx: AuthContext = Depends(require_customer),
+):
+    """Unsigniertes Vorschau-PDF des zu signierenden Dokuments."""
+    vorgang = (
+        await session.execute(select(Signaturvorgang).where(Signaturvorgang.token == token))
+    ).scalar_one_or_none()
+    if not vorgang:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nicht gefunden")
+    customer_id = await resolve_customer_id(session, vorgang)
+    if customer_id:
+        ctx.require_customer_scope(customer_id)
+    if customer_id is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nicht gefunden")
+
+    inhalt = await build_dokument_inhalt(session, vorgang, customer_id)
+    pdf = await asyncio.to_thread(build_vorschau_pdf, inhalt)
+    return Response(content=pdf, media_type="application/pdf")
 
 
 def _client_ip(request: Request) -> str | None:
