@@ -454,3 +454,10 @@ Positionen mit Katalog-Leistungen verknüpfen.
 (node:20-Container), Backend `py_compile` ok. Migration `0003` + Test-Suite gegen
 laufende DB stehen aus (lokal keine DB) – auf dem VPS `alembic upgrade head`
 läuft automatisch beim Start.
+
+### Signatur-Vorschau: hochgeladenes Original-PDF bevorzugen
+
+`src/api/customer/signatur.py` (`/{token}/vorschau`): existiert zum Vorgang ein
+hochgeladenes Dokument (`typ=angebot`), wird dieses Original-PDF ausgeliefert
+(FileResponse); sonst Fallback auf die generierte Inhalts-Vorschau. So sieht der
+Kunde beim Signieren eines extern hochgeladenen Angebots das echte Dokument.

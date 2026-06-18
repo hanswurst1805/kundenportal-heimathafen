@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import uuid
-
 import asyncio
+import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +14,7 @@ from src.automation.events import publish
 from src.core.auth import AuthContext, require_customer
 from src.core.database import get_session
 from src.models.customer import Customer
+from src.models.dokument import DOK_ANGEBOT, Dokument
 from src.models.ereignis import AKTEUR_USER
 from src.models.signatur import (
     SIGNATUR_ERSTELLT,
@@ -120,6 +122,24 @@ async def vorschau(
     if customer_id is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nicht gefunden")
 
+    # Wurde ein externes Angebot-PDF hochgeladen, dieses Original anzeigen.
+    hochgeladen = (
+        await session.execute(
+            select(Dokument)
+            .where(
+                Dokument.bezugstyp == vorgang.bezugstyp,
+                Dokument.bezugs_id == vorgang.bezugs_id,
+                Dokument.typ == DOK_ANGEBOT,
+            )
+            .order_by(Dokument.created_at.desc())
+        )
+    ).scalars().first()
+    if hochgeladen:
+        pfad = Path(hochgeladen.ablageort)
+        if pfad.is_file():
+            return FileResponse(pfad, filename=hochgeladen.dateiname, media_type="application/pdf")
+
+    # Sonst: generierte Inhalts-Vorschau (Positionen/Daten).
     inhalt = await build_dokument_inhalt(session, vorgang, customer_id)
     pdf = await asyncio.to_thread(build_vorschau_pdf, inhalt)
     return Response(content=pdf, media_type="application/pdf")
