@@ -417,3 +417,40 @@ laufende DB steht aus (lokal keine DB).
 `Dockerfile`: `pip install` mit `--root-user-action=ignore --disable-pip-version-check`
 – entfernt die „Running pip as the 'root' user“-Warnung und den Versionshinweis
 beim `kundenportal.sh update`/`build` (rein kosmetisch, Build war zuvor erfolgreich).
+
+### Admin: System-Reset (alle Daten + Dateien zurücksetzen)
+
+Admin-only Funktion zum Zurücksetzen des Systems.
+
+- `src/api/internal/admin.py` (neu, `require_role("admin")`): `POST /intern/admin/reset`
+  – verlangt Body `{"bestaetigung": "RESET"}`, leert FK-sicher alle Tabellen
+  außer `status_regeln` (Automatisierungs-Config bleibt), löscht abgelegte
+  Dateien (Dokumentenablage + Siegel-Zertifikat) und legt via `bootstrap_admin`
+  den initialen Admin neu an. `src/schemas/admin.py` (Request/Result); Router in
+  `src/api/internal/__init__.py` registriert.
+- Frontend: `pages/internal/SystemReset.tsx` („Gefahrenzone“, Tippbestätigung
+  `RESET`, danach Auto-Logout), Menüpunkt „System zurücksetzen“ (admin-only) in
+  `InternalLayout`, admin-gated Route in `App.tsx`, `api.intern.admin.reset()`.
+
+### Externes Angebot hochladen + Positionen mit Katalog verknüpfen
+
+Interne Nutzer können ein extern erstelltes Angebot-PDF hochladen und die
+Positionen mit Katalog-Leistungen verknüpfen.
+
+- `src/models/angebot.py`: `AngebotPosition.leistung_id` (nullable FK auf
+  `leistungen`); Migration `0003_angebot_position_leistung`.
+- `src/schemas/angebot.py`: `AngebotPositionIn.leistung_id` optional.
+- `src/api/internal/angebote.py`: `POST /intern/angebote/upload` (multipart) –
+  legt Angebot + Positionen (mit `leistung_id`) an, speichert das PDF als
+  Dokument (`typ=angebot`, zunächst `sichtbarkeit=intern`). `bereitstellen`
+  schaltet die zugehörigen Angebot-Dokumente auf `kunde` (kundensichtbar).
+  `update_angebot` führt `leistung_id` mit.
+- Frontend: `pages/internal/AngebotUpload.tsx` (Kunde/Titel/Gültigkeit, PDF-Upload,
+  Positionszeilen mit Katalog-Auswahl → Bezeichnung/Preis vorbefüllt),
+  „Externes Angebot hochladen“-Button auf der Angebote-Liste, Route in `App.tsx`,
+  `api.intern.angebote.uploadExternes()` (FormData) + `AngebotPosition.leistung_id`.
+
+**Verifikation (beide Features)**: Frontend `tsc -b` + `eslint` fehlerfrei
+(node:20-Container), Backend `py_compile` ok. Migration `0003` + Test-Suite gegen
+laufende DB stehen aus (lokal keine DB) – auf dem VPS `alembic upgrade head`
+läuft automatisch beim Start.

@@ -44,6 +44,9 @@ class AngebotPosition(Base, UUIDPKMixin):
     __tablename__ = "angebot_positionen"
 
     angebot_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("angebote.id"))
+    leistung_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leistungen.id"), nullable=True
+    )
     bezeichnung: Mapped[str] = mapped_column(String(255))
     menge: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=1)
     einzelpreis: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)

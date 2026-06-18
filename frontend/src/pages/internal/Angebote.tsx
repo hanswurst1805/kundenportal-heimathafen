@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { Upload } from 'lucide-react'
 import { api, type Angebot } from '../../api/client'
 import { formatCurrency, formatDate } from '../../lib/format'
 import { ANGEBOT_STATUS_LABELS } from '../../lib/statuscodes'
@@ -80,6 +81,7 @@ function AngebotRow({ angebot }: { angebot: Angebot }) {
 }
 
 export default function Angebote() {
+  const navigate = useNavigate()
   const { data: angebote, isLoading } = useQuery({
     queryKey: ['intern', 'angebote'],
     queryFn: api.intern.angebote.list,
@@ -87,7 +89,15 @@ export default function Angebote() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-white">Angebote</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-white">Angebote</h1>
+        <button
+          onClick={() => navigate('/intern/angebote/upload')}
+          className="flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium px-4 py-2 rounded-lg"
+        >
+          <Upload size={16} /> Externes Angebot hochladen
+        </button>
+      </div>
 
       {isLoading || !angebote ? (
         <p className="text-sm text-slate-500">Lade…</p>

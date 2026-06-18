@@ -13,6 +13,7 @@ import {
   Boxes,
   SlidersHorizontal,
   Users,
+  Trash2,
   Settings,
   LogOut,
   Anchor,
@@ -34,6 +35,7 @@ const nav = [
   { to: '/intern/leistungen', icon: Boxes, label: 'Katalog-Editor', adminOnly: false },
   { to: '/intern/statusregeln', icon: SlidersHorizontal, label: 'Statusregeln', adminOnly: true },
   { to: '/intern/benutzer', icon: Users, label: 'Benutzerverwaltung', adminOnly: true },
+  { to: '/intern/system-reset', icon: Trash2, label: 'System zurücksetzen', adminOnly: true },
 ]
 
 export default function InternalLayout({ children }: { children: React.ReactNode }) {

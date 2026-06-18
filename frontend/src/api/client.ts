@@ -126,6 +126,7 @@ export interface AngebotPosition {
   einzelpreis: string
   gesamtpreis: string
   sort_order: number
+  leistung_id: string | null
 }
 
 export interface Angebot {
@@ -760,6 +761,30 @@ export const api = {
       bereitstellen(id: string): Promise<Angebot> {
         return req<Angebot>(`/intern/angebote/${id}/bereitstellen`, { method: 'POST' })
       },
+      async uploadExternes(data: {
+        customer_id: string
+        titel: string
+        gueltig_bis?: string
+        positionen: { bezeichnung: string; menge: string; einzelpreis: string; sort_order?: number; leistung_id?: string }[]
+        datei: File
+      }): Promise<Angebot> {
+        const fd = new FormData()
+        fd.set('customer_id', data.customer_id)
+        fd.set('titel', data.titel)
+        if (data.gueltig_bis) fd.set('gueltig_bis', data.gueltig_bis)
+        fd.set('positionen', JSON.stringify(data.positionen))
+        fd.set('datei', data.datei)
+        const res = await fetch(`${BASE}/intern/angebote/upload`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
+          body: fd,
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.detail ?? `${res.status} ${res.statusText}`)
+        }
+        return res.json()
+      },
     },
 
     bestellungen: {
@@ -979,6 +1004,12 @@ export const api = {
       },
       reset2FA(id: string): Promise<{ totp_enabled: boolean }> {
         return req<{ totp_enabled: boolean }>(`/intern/users/${id}/reset-2fa`, { method: 'POST' })
+      },
+    },
+
+    admin: {
+      reset(bestaetigung: string): Promise<{ geleerte_tabellen: string[]; geloeschte_dateien: number }> {
+        return req('/intern/admin/reset', { method: 'POST', body: JSON.stringify({ bestaetigung }) })
       },
     },
   },

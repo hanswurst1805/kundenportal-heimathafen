@@ -21,6 +21,7 @@ import InternDashboard from './pages/internal/Dashboard'
 import InternAnfragen from './pages/internal/Anfragen'
 import AngebotErstellen from './pages/internal/AngebotErstellen'
 import AngebotBearbeiten from './pages/internal/AngebotBearbeiten'
+import AngebotUpload from './pages/internal/AngebotUpload'
 import InternAngebote from './pages/internal/Angebote'
 import InternBestellungen from './pages/internal/Bestellungen'
 import InternAuftraege from './pages/internal/Auftraege'
@@ -34,6 +35,7 @@ import Kunden from './pages/internal/Kunden'
 import Leistungen from './pages/internal/Leistungen'
 import Statusregeln from './pages/internal/Statusregeln'
 import Benutzer from './pages/internal/Benutzer'
+import SystemReset from './pages/internal/SystemReset'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -92,6 +94,7 @@ function InternalRoutes({ me }: { me: UserMe }) {
       <Route path="/intern/anfragen" element={<InternalLayout><InternAnfragen /></InternalLayout>} />
       <Route path="/intern/anfragen/:id/angebot" element={<InternalLayout><AngebotErstellen /></InternalLayout>} />
       <Route path="/intern/angebote" element={<InternalLayout><InternAngebote /></InternalLayout>} />
+      <Route path="/intern/angebote/upload" element={<InternalLayout><AngebotUpload /></InternalLayout>} />
       <Route path="/intern/angebote/:id/bearbeiten" element={<InternalLayout><AngebotBearbeiten /></InternalLayout>} />
       <Route
         path="/intern/bestellungen"
@@ -134,6 +137,14 @@ function InternalRoutes({ me }: { me: UserMe }) {
         element={
           isAdmin
             ? <InternalLayout><Benutzer /></InternalLayout>
+            : <Navigate to="/intern" replace />
+        }
+      />
+      <Route
+        path="/intern/system-reset"
+        element={
+          isAdmin
+            ? <InternalLayout><SystemReset /></InternalLayout>
             : <Navigate to="/intern" replace />
         }
       />

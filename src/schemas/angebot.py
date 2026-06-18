@@ -13,6 +13,7 @@ class AngebotPositionIn(BaseModel):
     menge: Decimal = Decimal("1")
     einzelpreis: Decimal = Decimal("0")
     sort_order: int = 0
+    leistung_id: Optional[uuid.UUID] = None
 
 
 class AngebotPositionOut(AngebotPositionIn):

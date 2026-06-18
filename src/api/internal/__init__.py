@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from src.api.internal.admin import router as admin_router
 from src.api.internal.anfragen import router as anfragen_router
 from src.api.internal.angebote import router as angebote_router
 from src.api.internal.auftraege import router as auftraege_router
@@ -36,3 +37,4 @@ router.include_router(leistungen_router)
 router.include_router(umfragen_router)
 router.include_router(statusregeln_router)
 router.include_router(users_router)
+router.include_router(admin_router)
