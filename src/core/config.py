@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     jwt_secret: str = "CHANGE_ME_IN_PRODUCTION_USE_RANDOM_32_CHARS"
     jwt_expire_hours: int = 8
     initial_admin_password: str = "changeme"  # Wird beim ersten Start gesetzt
+    # 2FA (TOTP): wenn True, ist die Einrichtung fuer interne Rollen Pflicht
+    # (Zugriff erst nach Setup). Wenn False (Default), bleibt 2FA optional –
+    # jeder kann es freiwillig aktivieren, wird aber nicht dazu gezwungen.
+    require_2fa: bool = False
 
     # Adapter-Provider
     signature_provider: str = "inhouse"  # einziger Signatur-Provider

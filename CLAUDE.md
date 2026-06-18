@@ -74,8 +74,9 @@ tests/               conftest.py, test_integration.py, test_signatur_inhouse.py
 
 - **Rollen**: `admin` (alles inkl. Statusregeln/Benutzer/Vorlagen), `user`
   (operative interne Bearbeitung), `kunde` (Portal, `customer_id`-gebunden).
-  **2FA (TOTP)** für alle möglich, für `admin`/`user` Pflicht (Backend erzwingt
-  Einrichtung vor Zugriff auf geschützte Endpunkte). Setup zeigt QR-Code.
+  **2FA (TOTP)** für alle möglich und standardmäßig **optional**. Per Setting
+  `REQUIRE_2FA=true` wird sie für `admin`/`user` zur Pflicht (Backend erzwingt dann
+  die Einrichtung vor Zugriff auf geschützte Endpunkte). Setup zeigt QR-Code.
 - **Mandantentrennung**: jede Kunden-Query über `ctx.customer_id`;
   `require_customer_scope` wirft 404 bei Fremdzugriff.
 - **Status**: 15 kundensichtbare Hauptstatus + interne Zwischenschritte in

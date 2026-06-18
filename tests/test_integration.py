@@ -2,7 +2,7 @@
 
 Deckt die Verifikationspunkte aus dem Plan ab:
 - Login je Rolle inkl. 2FA-Flow (Setup, mfa_required, Verify)
-- 2FA-Pflicht-Gating fuer interne Rollen (kein Zugriff bis 2FA aktiv)
+- 2FA standardmaessig optional (REQUIRE_2FA=false); Pflicht-Gating nur bei REQUIRE_2FA=true
 - Rollenpruefung interner Endpunkte (`user` vs. admin-only)
 - Mandantentrennung (404 bei Fremdzugriff)
 - Vollstaendiger Bestell-Workflow inkl. aller 9 Status-Trigger
@@ -125,10 +125,11 @@ async def test_kunde_login_ohne_2fa_zwang(client, world):
     assert r.json()["role"] == "kunde"
 
 
-async def test_interner_user_ohne_2fa_wird_geblockt(client, world):
-    # Trotz gueltigem Token: interne Endpunkte verlangen aktives 2FA.
+async def test_interner_user_ohne_2fa_nicht_geblockt(client, world):
+    # 2FA ist standardmaessig optional (REQUIRE_2FA=false) -> Zugriff ohne 2FA erlaubt.
+    # Erst mit REQUIRE_2FA=true wuerde hier 403 verlangt.
     r = await client.get("/api/v1/intern/anfragen", headers=_auth(world["user_token_no2fa"]))
-    assert r.status_code == 403
+    assert r.status_code == 200
 
 
 # ---------------------------------------------------------------------------

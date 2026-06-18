@@ -23,6 +23,7 @@ from src.core.auth import (
     verify_password,
     verify_totp_code,
 )
+from src.core.config import settings
 from src.core.database import get_session
 from src.models.user import User
 from src.schemas.auth import (
@@ -55,7 +56,7 @@ async def login(
     return LoginResponse(
         access_token=create_access_token(user.id, user.role, user.customer_id),
         token_type="bearer",
-        needs_2fa_setup=user.totp_required and not user.totp_enabled,
+        needs_2fa_setup=settings.require_2fa and user.totp_required and not user.totp_enabled,
     )
 
 
@@ -97,7 +98,10 @@ async def me(
     user = await session.get(User, ctx.user_id)
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Benutzer nicht gefunden")
-    return UserMeResponse.model_validate(user)
+    antwort = UserMeResponse.model_validate(user)
+    # Effektive 2FA-Pflicht: nur wenn global aktiviert (sonst optional).
+    antwort.totp_required = settings.require_2fa and user.totp_required
+    return antwort
 
 
 @router.post("/2fa/setup", response_model=TOTPSetupResponse)
@@ -152,7 +156,7 @@ async def disable_2fa(
     user = await session.get(User, ctx.user_id)
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Benutzer nicht gefunden")
-    if user.totp_required:
+    if settings.require_2fa and user.totp_required:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "Zwei-Faktor-Authentifizierung kann fuer diese Rolle nicht deaktiviert werden"
         )

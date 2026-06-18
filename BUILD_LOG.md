@@ -455,6 +455,27 @@ Positionen mit Katalog-Leistungen verknüpfen.
 laufende DB stehen aus (lokal keine DB) – auf dem VPS `alembic upgrade head`
 läuft automatisch beim Start.
 
+### 2FA optional statt Pflicht (konfigurierbar)
+
+2FA ist jetzt standardmäßig **optional**; die Pflicht ist über ein Setting
+schaltbar (`REQUIRE_2FA`, Default `false`).
+
+- `src/core/config.py`: `require_2fa: bool = False`.
+- `src/core/auth.py`: `AuthContext.needs_2fa_setup` greift nur noch, wenn
+  `settings.require_2fa` aktiv ist (gilt zentral für `require_role`/
+  `require_internal`/`require_admin`).
+- `src/api/auth.py`: Login-`needs_2fa_setup` und `/auth/me.totp_required` melden
+  den **effektiven** Wert (`require_2fa and totp_required`); `2fa/disable` sperrt
+  nur bei effektiver Pflicht. Dadurch braucht das Frontend keine Änderung
+  (Settings/Forced-Setup richten sich nach `me.totp_required`).
+- `.env.example`, `deploy/kundenportal.env.example`: `REQUIRE_2FA=false`.
+- `tests/test_integration.py`: Test angepasst – interner User ohne 2FA ist bei
+  Default nicht mehr geblockt (Pflicht-Gating nur mit `REQUIRE_2FA=true`).
+- `CLAUDE.md`: 2FA-Beschreibung aktualisiert.
+
+2FA bleibt voll funktionsfähig als Opt-in: Setup/QR im Self-Service, Login fragt
+den Code ab, sobald aktiviert.
+
 ### Signatur-Vorschau: hochgeladenes Original-PDF bevorzugen
 
 `src/api/customer/signatur.py` (`/{token}/vorschau`): existiert zum Vorgang ein

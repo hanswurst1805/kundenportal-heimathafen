@@ -150,7 +150,8 @@ class AuthContext(BaseModel):
 
     @property
     def needs_2fa_setup(self) -> bool:
-        return self.totp_required and not self.totp_enabled
+        # Erzwingung nur, wenn 2FA global Pflicht ist (sonst optional).
+        return settings.require_2fa and self.totp_required and not self.totp_enabled
 
     def require_customer_scope(self, target_customer_id: uuid.UUID) -> None:
         """Wirft 404, falls ein Kunde auf Daten eines anderen Mandanten zugreift.
