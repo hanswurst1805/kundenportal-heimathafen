@@ -4,7 +4,14 @@ import { PenLine, FileText, ShieldCheck, ClipboardList, FileCheck2, ArrowLeft } 
 import { api } from '../../api/client'
 import AblaufGrafik from '../../components/AblaufGrafik'
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format'
-import { ANGEBOT_STATUS_LABELS, AVV_STATUS_LABELS, KUNDENSTATUS_LABELS } from '../../lib/statuscodes'
+import {
+  ANGEBOT_STATUS_LABELS,
+  AVV_STATUS_LABELS,
+  KUNDENSTATUS_LABELS,
+  WORKSHOP_TYP_LABELS,
+  WORKSHOP_STATUS_LABELS,
+  AUFGABE_STATUS_LABELS,
+} from '../../lib/statuscodes'
 
 const TYP_LABEL: Record<string, string> = { anfrage: 'Anfrage', bestellung: 'Bestellung' }
 
@@ -128,16 +135,66 @@ export default function VorgangDetail() {
         </Abschnitt>
       )}
 
-      {v.leistungsschein_id && (
+      {v.leistungsschein && (
         <Abschnitt icon={<ClipboardList size={16} />} titel="Leistungsschein">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-400">
-              {v.leistungsschein_status ? (KUNDENSTATUS_LABELS[v.leistungsschein_status] ?? v.leistungsschein_status) : '—'}
+            <span className="text-slate-300">
+              {v.leistungsschein.ls_nummer}
+              <span className="text-slate-500 ml-2">
+                {KUNDENSTATUS_LABELS[v.leistungsschein.status_kunde] ?? v.leistungsschein.status_kunde}
+              </span>
             </span>
-            <Link to={`/portal/leistungsscheine/${v.leistungsschein_id}`} className="text-sky-400 hover:text-sky-300">
-              Leistungsschein öffnen
+            <Link to={`/portal/leistungsscheine/${v.leistungsschein.id}`} className="text-sky-400 hover:text-sky-300">
+              Öffnen
             </Link>
           </div>
+
+          {(v.leistungsschein.startdatum || v.leistungsschein.solltermin || v.leistungsschein.naechster_schritt) && (
+            <div className="grid grid-cols-2 gap-3 text-sm pt-2 border-t border-slate-800">
+              {v.leistungsschein.startdatum && (
+                <div><p className="text-xs text-slate-500">Start</p><p className="text-slate-300">{formatDate(v.leistungsschein.startdatum)}</p></div>
+              )}
+              {v.leistungsschein.solltermin && (
+                <div><p className="text-xs text-slate-500">Solltermin</p><p className="text-slate-300">{formatDate(v.leistungsschein.solltermin)}</p></div>
+              )}
+              {v.leistungsschein.naechster_schritt && (
+                <div className="col-span-2"><p className="text-xs text-slate-500">Nächster Schritt</p><p className="text-slate-300">{v.leistungsschein.naechster_schritt}</p></div>
+              )}
+            </div>
+          )}
+
+          <div className="pt-2 border-t border-slate-800">
+            <p className="text-xs text-slate-500 mb-1.5">Workshops</p>
+            {v.leistungsschein.workshops.length === 0 ? (
+              <p className="text-sm text-slate-500">Noch keine Workshops geplant.</p>
+            ) : (
+              <ul className="divide-y divide-slate-800">
+                {v.leistungsschein.workshops.map(w => (
+                  <li key={w.id} className="py-1.5 flex items-center justify-between text-sm">
+                    <div>
+                      <span className="text-slate-200">{WORKSHOP_TYP_LABELS[w.typ] ?? w.typ}</span>
+                      {w.termin && <span className="text-xs text-slate-500 ml-2">{formatDateTime(w.termin)}</span>}
+                    </div>
+                    <span className="text-xs text-slate-400">{WORKSHOP_STATUS_LABELS[w.status] ?? w.status}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {v.leistungsschein.aufgaben.length > 0 && (
+            <div className="pt-2 border-t border-slate-800">
+              <p className="text-xs text-slate-500 mb-1.5">Aufgaben</p>
+              <ul className="divide-y divide-slate-800">
+                {v.leistungsschein.aufgaben.map(a => (
+                  <li key={a.id} className="py-1.5 flex items-center justify-between text-sm">
+                    <span className="text-slate-200">{a.titel}</span>
+                    <span className="text-xs text-slate-400">{AUFGABE_STATUS_LABELS[a.status] ?? a.status}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Abschnitt>
       )}
     </div>

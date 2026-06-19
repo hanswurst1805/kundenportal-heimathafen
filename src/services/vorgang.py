@@ -110,7 +110,12 @@ async def _baue_vorgang(
         ).scalar_one_or_none()
         leistungsschein = (
             await session.execute(
-                select(Leistungsschein).where(Leistungsschein.auftrag_id == auftrag.id)
+                select(Leistungsschein)
+                .where(Leistungsschein.auftrag_id == auftrag.id)
+                .options(
+                    selectinload(Leistungsschein.aufgaben),
+                    selectinload(Leistungsschein.workshops),
+                )
             )
         ).scalar_one_or_none()
 

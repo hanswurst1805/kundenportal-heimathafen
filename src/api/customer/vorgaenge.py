@@ -10,6 +10,7 @@ from src.core.database import get_session
 from src.schemas.angebot import AngebotOut
 from src.schemas.auftrag import AuftragOut, AuftragsbestaetigungOut
 from src.schemas.avv import AVVOut
+from src.schemas.leistungsschein import LeistungsscheinKundenSicht
 from src.schemas.signatur import OffeneSignaturOut
 from src.schemas.vorgang import VorgangDetailOut, VorgangOut
 from src.services.vorgang import VorgangDaten, get_vorgang, list_vorgaenge
@@ -73,7 +74,9 @@ async def detail(
             if v.auftragsbestaetigung
             else None
         ),
-        leistungsschein_status=v.leistungsschein.status_kunde if v.leistungsschein else None,
+        leistungsschein=(
+            LeistungsscheinKundenSicht.model_validate(v.leistungsschein) if v.leistungsschein else None
+        ),
         offene_signaturen=[
             OffeneSignaturOut(
                 id=s.id,

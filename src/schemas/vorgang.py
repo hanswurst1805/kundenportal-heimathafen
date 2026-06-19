@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from src.schemas.angebot import AngebotOut
 from src.schemas.auftrag import AuftragOut, AuftragsbestaetigungOut
 from src.schemas.avv import AVVOut
+from src.schemas.leistungsschein import LeistungsscheinKundenSicht
 from src.schemas.signatur import OffeneSignaturOut
 
 
@@ -36,5 +37,5 @@ class VorgangDetailOut(VorgangOut):
     avv: Optional[AVVOut] = None
     auftrag: Optional[AuftragOut] = None
     auftragsbestaetigung: Optional[AuftragsbestaetigungOut] = None
-    leistungsschein_status: Optional[str] = None
+    leistungsschein: Optional[LeistungsscheinKundenSicht] = None
     offene_signaturen: list[OffeneSignaturOut] = []

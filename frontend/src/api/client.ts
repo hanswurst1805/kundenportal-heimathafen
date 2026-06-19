@@ -226,7 +226,7 @@ export interface VorgangDetail extends Vorgang {
   avv: AVV | null
   auftrag: Auftrag | null
   auftragsbestaetigung: Auftragsbestaetigung | null
-  leistungsschein_status: string | null
+  leistungsschein: Leistungsschein | null
   offene_signaturen: OffeneSignatur[]
 }
 

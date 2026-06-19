@@ -528,3 +528,22 @@ Der Backend-Endpunkt `/portal/dashboard` bleibt bestehen (ungenutzt).
 Lazy-Load auf der Async-Session → 500 → Kundenseite hing bei „Lade…“.
 Fix: `selectinload(Angebot.positionen)` in allen drei Stellen (die interne Liste
 hatte es bereits, die Portal-Endpunkte nicht).
+
+### Vorgang-Detail: Leistungsschein inkl. Workshops/Aufgaben eingebettet
+
+Befund: Im Vorgang-Detail (und auf der Aufträge-Seite) sah der Kunde den Auftrag,
+aber keine Leistungsschein-Details/Workshop-Termine – der Leistungsschein war nur
+ein Link. Fix: der Leistungsschein wird jetzt vollständig in den Vorgang
+eingebettet.
+
+- `src/services/vorgang.py`: Leistungsschein mit `selectinload(aufgaben, workshops)`
+  laden (sonst Async-Lazy-Load beim Einbetten).
+- `src/schemas/vorgang.py` + `src/api/customer/vorgaenge.py`: `VorgangDetailOut`
+  enthält statt `leistungsschein_status` nun das ganze `LeistungsscheinKundenSicht`.
+- `frontend/.../VorgangDetail.tsx`: Leistungsschein-Abschnitt zeigt Start/Solltermin,
+  nächster Schritt, **Workshops mit Terminen/Status** und Aufgaben inline (plus
+  Link zur vollen Leistungsschein-Seite). `client.ts`-Typ `VorgangDetail`
+  entsprechend angepasst.
+
+**Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (node:20-Container),
+Backend `py_compile` ok.
