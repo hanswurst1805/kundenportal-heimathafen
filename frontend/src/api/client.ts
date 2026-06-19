@@ -206,6 +206,30 @@ export interface Auftragsbestaetigung {
   kenntnisnahme_am: string | null
 }
 
+export interface Vorgang {
+  typ: string
+  root_id: string
+  referenz: string
+  titel: string
+  status_kunde: string
+  created_at: string
+  angebot_id: string | null
+  avv_id: string | null
+  auftrag_id: string | null
+  leistungsschein_id: string | null
+  auftragsbestaetigung_vorhanden: boolean
+  offene_signatur_token: string | null
+}
+
+export interface VorgangDetail extends Vorgang {
+  angebot: Angebot | null
+  avv: AVV | null
+  auftrag: Auftrag | null
+  auftragsbestaetigung: Auftragsbestaetigung | null
+  leistungsschein_status: string | null
+  offene_signaturen: OffeneSignatur[]
+}
+
 export interface Aufgabe {
   id: string
   titel: string
@@ -585,6 +609,15 @@ export const api = {
   portal: {
     dashboard(): Promise<DashboardData> {
       return req<DashboardData>('/portal/dashboard')
+    },
+
+    vorgaenge: {
+      list(): Promise<Vorgang[]> {
+        return req<Vorgang[]>('/portal/vorgaenge')
+      },
+      get(typ: string, rootId: string): Promise<VorgangDetail> {
+        return req<VorgangDetail>(`/portal/vorgaenge/${typ}/${rootId}`)
+      },
     },
 
     catalog: {

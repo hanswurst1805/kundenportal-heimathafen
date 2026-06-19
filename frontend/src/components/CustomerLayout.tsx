@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
+  Workflow,
   ShoppingCart,
   MessageSquareText,
   FileText,
@@ -17,6 +18,7 @@ import { api } from '../api/client'
 
 const nav = [
   { to: '/portal', icon: LayoutDashboard, label: 'Übersicht' },
+  { to: '/portal/vorgaenge', icon: Workflow, label: 'Meine Vorgänge' },
   { to: '/portal/katalog', icon: ShoppingCart, label: 'Katalog' },
   { to: '/portal/anfragen', icon: MessageSquareText, label: 'Anfragen' },
   { to: '/portal/angebote', icon: FileText, label: 'Angebote' },

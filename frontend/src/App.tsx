@@ -17,6 +17,8 @@ import Dokumente from './pages/customer/Dokumente'
 import Umfragen from './pages/customer/Umfragen'
 import Signatur from './pages/customer/Signatur'
 import PortalSignaturen from './pages/customer/Signaturen'
+import Vorgaenge from './pages/customer/Vorgaenge'
+import VorgangDetail from './pages/customer/VorgangDetail'
 import InternDashboard from './pages/internal/Dashboard'
 import InternAnfragen from './pages/internal/Anfragen'
 import AngebotErstellen from './pages/internal/AngebotErstellen'
@@ -65,6 +67,8 @@ function CustomerRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/portal" replace />} />
       <Route path="/portal" element={<CustomerLayout><Dashboard /></CustomerLayout>} />
+      <Route path="/portal/vorgaenge" element={<CustomerLayout><Vorgaenge /></CustomerLayout>} />
+      <Route path="/portal/vorgaenge/:typ/:id" element={<CustomerLayout><VorgangDetail /></CustomerLayout>} />
       <Route path="/portal/katalog" element={<CustomerLayout><Katalog /></CustomerLayout>} />
       <Route path="/portal/anfragen" element={<CustomerLayout><Anfragen /></CustomerLayout>} />
       <Route path="/portal/angebote" element={<CustomerLayout><Angebote /></CustomerLayout>} />

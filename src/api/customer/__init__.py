@@ -13,9 +13,11 @@ from src.api.customer.dokumente import router as dokumente_router
 from src.api.customer.leistungsscheine import router as leistungsscheine_router
 from src.api.customer.signatur import router as signatur_router
 from src.api.customer.umfragen import router as umfragen_router
+from src.api.customer.vorgaenge import router as vorgaenge_router
 
 router = APIRouter(prefix="/api/v1/portal")
 router.include_router(dashboard_router)
+router.include_router(vorgaenge_router)
 router.include_router(catalog_router)
 router.include_router(bestellungen_router)
 router.include_router(anfragen_router)

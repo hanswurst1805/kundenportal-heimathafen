@@ -482,3 +482,32 @@ den Code ab, sobald aktiviert.
 hochgeladenes Dokument (`typ=angebot`), wird dieses Original-PDF ausgeliefert
 (FileResponse); sonst Fallback auf die generierte Inhalts-Vorschau. So sieht der
 Kunde beim Signieren eines extern hochgeladenen Angebots das echte Dokument.
+
+### Kundensicht: durchgängige Vorgangsansicht (Aggregation)
+
+Befund: Die Kundensicht zeigte Anfrage/Angebot/AVV/Auftrag/Leistungsschein als
+isolierte Listen mit je eigenem Status-Vokabular, ohne Querverlinkung; die
+Ablaufgrafik hing an `anfrage.status_kunde` (bleibt bei „beauftragt“ stehen,
+während die Umsetzung am Leistungsschein weiterläuft) und Bestell-Vorgänge hatten
+gar keine Grafik. Lösung: ein aggregierter „Vorgang“ pro Wurzel (Anfrage **oder**
+Bestellung) mit effektivem Gesamtstatus.
+
+- `src/services/vorgang.py`: baut je Wurzel die ganze Kette zusammen
+  (Angebot via `angebot_id`, Auftrag via `ursprung_id`, Auftragsbestätigung +
+  Leistungsschein via `auftrag_id`, AVV via `bezugs_id`, offene Signaturen über
+  alle Bezugs-IDs). Effektiver Status = am weitesten fortgeschrittene Stufe im
+  `KUNDENSTATUS`-Modell über Wurzel **und** Leistungsschein.
+- `src/schemas/vorgang.py`: `VorgangOut` (Liste) + `VorgangDetailOut` (eingebettetes
+  Angebot/AVV/Auftrag/Auftragsbestätigung + offene Signaturen).
+- `src/api/customer/vorgaenge.py`: `GET /portal/vorgaenge` (Liste) und
+  `GET /portal/vorgaenge/{typ}/{root_id}` (Detail); im Customer-Router registriert.
+- Frontend: `api.portal.vorgaenge` + Typen `Vorgang`/`VorgangDetail`; Seiten
+  `customer/Vorgaenge.tsx` (Liste mit durchgängiger Ablaufgrafik je Vorgang +
+  Schnell-Signieren) und `customer/VorgangDetail.tsx` (ein Faden: Ablaufgrafik,
+  zu signieren, Angebot inkl. Positionen, AVV, Auftrag+Auftragsbestätigung,
+  Leistungsschein – mit Deep-Links zu den bestehenden Aktionsseiten). Menüpunkt
+  „Meine Vorgänge“ + Routen `/portal/vorgaenge[/:typ/:id]`.
+
+**Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (node:20-Container),
+Backend `py_compile` ok, keine Import-Zyklen. Test-Suite/Live gegen DB steht aus
+(lokal keine DB).
