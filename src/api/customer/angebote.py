@@ -5,6 +5,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.adapters.registry import get_signature_provider
 from src.core.auth import AuthContext, require_customer
@@ -23,7 +24,10 @@ async def list_angebote(
     ctx: AuthContext = Depends(require_customer),
 ):
     result = await session.execute(
-        select(Angebot).where(Angebot.customer_id == ctx.customer_id).order_by(Angebot.created_at.desc())
+        select(Angebot)
+        .where(Angebot.customer_id == ctx.customer_id)
+        .options(selectinload(Angebot.positionen))
+        .order_by(Angebot.created_at.desc())
     )
     return result.scalars().all()
 
@@ -34,7 +38,11 @@ async def get_angebot(
     session: AsyncSession = Depends(get_session),
     ctx: AuthContext = Depends(require_customer),
 ):
-    angebot = await session.get(Angebot, angebot_id)
+    angebot = (
+        await session.execute(
+            select(Angebot).where(Angebot.id == angebot_id).options(selectinload(Angebot.positionen))
+        )
+    ).scalar_one_or_none()
     if not angebot:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nicht gefunden")
     ctx.require_customer_scope(angebot.customer_id)
@@ -48,7 +56,11 @@ async def ablehnen(
     session: AsyncSession = Depends(get_session),
     ctx: AuthContext = Depends(require_customer),
 ):
-    angebot = await session.get(Angebot, angebot_id)
+    angebot = (
+        await session.execute(
+            select(Angebot).where(Angebot.id == angebot_id).options(selectinload(Angebot.positionen))
+        )
+    ).scalar_one_or_none()
     if not angebot:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nicht gefunden")
     ctx.require_customer_scope(angebot.customer_id)

@@ -520,3 +520,11 @@ mit durchgängiger Ablaufgrafik je Vorgang + Link ins Detail; „Zu signieren“
 bleibt. Die früheren drei Einzellisten (offene Bestellungen/Anfragen, laufende
 Leistungsscheine) und die an `anfrage.status_kunde` hängende Grafik entfallen.
 Der Backend-Endpunkt `/portal/dashboard` bleibt bestehen (ungenutzt).
+
+### Bugfix: Kunden-Angebote luden nicht (Async-Lazy-Load)
+
+`GET /portal/angebote` (Liste + Detail + `ablehnen`) gab `AngebotOut` mit
+`positionen` zurueck, lud die Positionen aber nicht eager → beim Serialisieren
+Lazy-Load auf der Async-Session → 500 → Kundenseite hing bei „Lade…“.
+Fix: `selectinload(Angebot.positionen)` in allen drei Stellen (die interne Liste
+hatte es bereits, die Portal-Endpunkte nicht).
