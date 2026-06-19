@@ -511,3 +511,12 @@ Bestellung) mit effektivem Gesamtstatus.
 **Verifikation**: Frontend `tsc -b` + `eslint` fehlerfrei (node:20-Container),
 Backend `py_compile` ok, keine Import-Zyklen. Test-Suite/Live gegen DB steht aus
 (lokal keine DB).
+
+### Dashboard auf Vorgänge umgestellt
+
+`frontend/src/pages/customer/Dashboard.tsx` nutzt jetzt `GET /portal/vorgaenge`
+als einzige Quelle: Sektion „Laufende Vorgänge“ (Status ≠ abgeschlossen/storniert)
+mit durchgängiger Ablaufgrafik je Vorgang + Link ins Detail; „Zu signieren“-CTA
+bleibt. Die früheren drei Einzellisten (offene Bestellungen/Anfragen, laufende
+Leistungsscheine) und die an `anfrage.status_kunde` hängende Grafik entfallen.
+Der Backend-Endpunkt `/portal/dashboard` bleibt bestehen (ungenutzt).
